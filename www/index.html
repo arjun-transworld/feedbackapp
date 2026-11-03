@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Private Skies Feedback</title>
+  <link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+  <!-- Shown only when index.html is double-clicked: browsers block JS modules on file:// pages. -->
+  <script>
+    if (location.protocol === "file:" || location.protocol === "data:") {
+      document.write('<div style="background:#0b2a5b;color:#fff;padding:16px;font:15px system-ui,sans-serif">' +
+        'This page must be served, not opened as a file. Run <code>powershell -ExecutionPolicy Bypass -File tools\\serve.ps1</code> ' +
+        'in the FeedbackApp folder, then open <a style="color:#9cc3ff" href="http://localhost:8080">http://localhost:8080</a>.</div>');
+    }
+  </script>
+  <!-- Crew bar: sync status + flight setup. Passengers only see the form below. -->
+  <header class="crew-bar">
+    <span id="sync-status" class="sync">Starting…</span>
+    <button id="crew-toggle" class="link" type="button">Crew</button>
+  </header>
+
+  <section id="crew-panel" class="crew-panel" hidden>
+    <p id="crew-account" class="muted"></p>
+    <label>Date &amp; route <input id="crew-route" placeholder="02 Nov 2026 · DXB → LTN"></label>
+    <label>Aircraft / tail no. <input id="crew-tail" placeholder="G7500 · A6-TWJ"></label>
+    <div class="row">
+      <button id="crew-save" type="button">Save flight</button>
+      <button id="crew-signin" type="button" class="secondary">Crew sign in</button>
+      <button id="crew-sync" type="button" class="secondary">Sync now</button>
+    </div>
+    <ul id="queue-list" class="queue-list"></ul>
+  </section>
+
+  <main>
+    <form id="feedback-form" class="card" novalidate>
+      <p class="eyebrow">The Private Skies Experience</p>
+      <h1>Two minutes of your time</h1>
+
+      <div class="meta">
+        <div><span>Date &amp; route</span><strong id="show-route">—</strong></div>
+        <div><span>Aircraft / tail no.</span><strong id="show-tail">—</strong></div>
+      </div>
+      <p class="hint">Date, route &amp; aircraft pre-filled by your cabin crew</p>
+
+      <label class="field">Name (optional)<input name="name" autocomplete="off"></label>
+
+      <h2>Rate your experience</h2>
+      <div class="ratings" id="ratings"></div>
+
+      <fieldset class="choice">
+        <legend>Would you choose us again for your next journey?</legend>
+        <label><input type="radio" name="chooseAgain" value="yes"><span>Yes</span></label>
+        <label><input type="radio" name="chooseAgain" value="no"><span>No</span></label>
+      </fieldset>
+
+      <label class="field">Anything we should know<textarea name="comments" rows="4"></textarea></label>
+
+      <p id="form-error" class="error" hidden></p>
+      <button type="submit" class="submit">Submit</button>
+      <p class="footer">Thank you for flying with us — every detail noted here shapes the journey ahead.</p>
+    </form>
+
+    <div id="thanks" class="card thanks" hidden>
+      <h1>Thank you</h1>
+      <p>Your feedback has been saved.</p>
+    </div>
+  </main>
+
+  <script src="static/js/transworld-auth.js"></script>
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>

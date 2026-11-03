@@ -1,0 +1,23 @@
+{
+  "name": "transworld-jets-feedback",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Offline-first passenger feedback app (Capacitor shell, plain JS UI, native iOS background upload).",
+  "scripts": {
+    "serve": "npx http-server www -p 8080 -c-1",
+    "ios:sync": "npx cap sync ios",
+    "ios:open": "npx cap open ios",
+    "android:sync": "npx cap sync android",
+    "android:open": "npx cap open android"
+  },
+  "dependencies": {
+    "@capacitor/android": "^7.0.0",
+    "@capacitor/app": "^7.0.0",
+    "@capacitor/core": "^7.0.0",
+    "@capacitor/ios": "^7.0.0",
+    "@recognizebv/capacitor-plugin-msal": "^7.0.0"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^7.0.0"
+  }
+}

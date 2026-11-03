@@ -1,0 +1,78 @@
+:root {
+  --navy: #0b2a5b;
+  --navy-dark: #071d40;
+  --navy-soft: #e8eef8;
+  --accent: #3d6bb3;
+  --ink: #14233d;
+  --muted: #5d6b82;
+  --paper: #f3f6fb;
+  --line: #d5deec;
+  --error: #a33a2c;
+  font-family: Georgia, "Times New Roman", serif;
+  color: var(--ink);
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body {
+  margin: 0;
+  background: var(--paper);
+  padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
+}
+button, input, textarea { font: inherit; }
+
+.crew-bar {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 8px 16px; background: var(--navy-dark); color: #c9d6ea;
+  font: 13px -apple-system, system-ui, sans-serif;
+}
+.sync::before { content: "●"; margin-right: 6px; color: #6fbf73; }
+.sync.pending::before { color: #f2c14e; }
+.sync.problem::before { color: #e06c5a; }
+.link { background: none; border: 0; color: #fff; text-decoration: underline; padding: 4px; }
+
+.crew-panel {
+  padding: 16px; background: var(--navy-soft); border-bottom: 1px solid var(--line);
+  font: 15px -apple-system, system-ui, sans-serif;
+  display: grid; gap: 10px;
+}
+.crew-panel label { display: grid; gap: 4px; }
+.crew-panel input { padding: 10px; border: 1px solid #c9ced6; border-radius: 6px; }
+.crew-panel button { padding: 10px 14px; border-radius: 6px; border: 0; background: var(--navy); color: #fff; }
+.crew-panel button.secondary { background: #fff; color: var(--navy); border: 1px solid var(--navy); }
+.row { display: flex; flex-wrap: wrap; gap: 8px; }
+.muted { color: var(--muted); margin: 0; }
+.queue-list { margin: 0; padding-left: 18px; font-size: 13px; color: var(--muted); }
+
+main { padding: 16px; max-width: 720px; margin: 0 auto; }
+.card { background: #fff; border: 1px solid var(--line); border-top: 6px solid var(--navy); border-radius: 10px; padding: 24px 20px; }
+.eyebrow { letter-spacing: .2em; text-transform: uppercase; color: var(--accent); font-size: 12px; margin: 0 0 6px; }
+h1 { font-weight: normal; color: var(--navy); font-size: 26px; margin: 0 0 18px; letter-spacing: .04em; text-transform: uppercase; }
+h2 { font-weight: normal; font-size: 14px; letter-spacing: .15em; text-transform: uppercase; color: var(--muted); margin: 24px 0 8px; }
+
+.meta { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); padding: 12px 0; }
+.meta span { display: block; font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+.meta strong { font-weight: normal; }
+.hint { font-size: 12px; color: var(--muted); font-style: italic; }
+
+.field { display: grid; gap: 6px; margin-top: 16px; font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+.field input, .field textarea { padding: 10px; border: 1px solid var(--line); border-radius: 6px; color: var(--ink); text-transform: none; letter-spacing: normal; font-size: 16px; }
+
+.rating { border: 0; padding: 12px 0; margin: 0; border-bottom: 1px solid var(--line); }
+.rating legend { padding: 0; margin-bottom: 8px; }
+.scale { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.scale label, .choice label { position: relative; }
+.scale input, .choice input { position: absolute; opacity: 0; }
+.scale span, .choice span {
+  display: block; text-align: center; padding: 10px 2px; border: 1px solid var(--line); border-radius: 6px;
+  font: 13px -apple-system, system-ui, sans-serif; color: var(--muted);
+}
+.scale input:checked + span, .choice input:checked + span { background: var(--navy); border-color: var(--navy); color: #fff; }
+.scale input:focus-visible + span, .choice input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.choice { border: 0; padding: 0; margin: 20px 0 0; display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.choice legend { margin-bottom: 8px; }
+
+.error { color: var(--error); font-size: 14px; }
+.submit { width: 100%; margin-top: 20px; padding: 14px; border: 0; border-radius: 6px; background: var(--navy); color: #fff; font-size: 17px; letter-spacing: .1em; text-transform: uppercase; }
+.footer { text-align: center; font-style: italic; color: var(--muted); font-size: 13px; margin: 18px 0 0; }
+.thanks { text-align: center; padding: 60px 20px; }

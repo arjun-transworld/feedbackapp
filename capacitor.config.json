@@ -1,0 +1,8 @@
+{
+  "appId": "com.transworld.jets.feedback",
+  "appName": "Private Skies Feedback",
+  "webDir": "www",
+  "ios": {
+    "contentInset": "never"
+  }
+}
