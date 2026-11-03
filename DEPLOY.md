@@ -17,6 +17,7 @@ submission. The backend is owned by the backend team, and what it must do is des
 | [2. Get the backend details](#2-get-the-backend-details) | Backend team | — | 5 min |
 | [3. Fill in the app settings](#3-fill-in-the-app-settings-entra--endpoint) | Any dev | Any PC | 5 min |
 | [4. Build the iOS app](#4-build-the-ios-app-mac) | Any dev | **Mac** | 45 min first time |
+| [No Mac? Build with Codemagic](#building-without-a-mac-codemagic) | Any dev | Browser | 1 h first time |
 | [5. Install on a test device](#5-install-on-a-test-device) | Any dev | Mac + iPhone | 10 min |
 | [6. Test checklist](#6-test-checklist) | QA / crew lead | iPhone | 2–3 h (includes waiting) |
 | [7. Release to crew devices](#7-release-to-crew-devices) | Team lead + IT | App Store Connect / Intune | 1–2 days |
@@ -176,6 +177,59 @@ On the **General** tab, set **Display Name** to `Private Skies Feedback`, **Vers
 Add an app icon under **Assets → AppIcon**: one 1024×1024 PNG is enough.
 
 ✅ **Check:** **Product → Build** (⌘B) shows "Build Succeeded". If it fails, see [Troubleshooting](#troubleshooting).
+
+---
+
+## Building without a Mac (Codemagic)
+
+[`codemagic.yaml`](codemagic.yaml) builds the app on Codemagic's cloud Macs.
+[`tools/ios-setup.rb`](tools/ios-setup.rb) does the Xcode steps 4b–4f automatically, so nobody opens Xcode.
+It has two workflows:
+
+### A. Free Apple ID, test on your own iPhone (`ios-unsigned`)
+
+No Apple Developer membership needed. Codemagic builds an **unsigned** `.ipa`; **Sideloadly** on Windows
+signs it with a free Apple ID and installs it over USB.
+
+1. Push the repo, then in Codemagic click **Check for configuration file** → **Start new build** →
+   workflow *iOS unsigned .ipa (free Apple ID)*. When it finishes, download `PrivateSkiesFeedback-unsigned.ipa` from the build's **Artifacts**.
+2. On the PC, install **iTunes** and **iCloud** from apple.com (the website versions, not the Microsoft Store ones), then **Sideloadly** (sideloadly.io).
+3. Connect the iPhone with a cable, unlock it and tap **Trust**.
+4. Open Sideloadly, drag in the `.ipa`, enter an Apple ID, and click **Start**.
+   Use a **separate test Apple ID**, not your personal one, because you're giving its password to a third-party tool.
+   Keep the bundle ID `com.transworld.jets.feedback`, since Entra's iOS redirect depends on it.
+5. On the iPhone, turn on **Settings → Privacy & Security → Developer Mode** (it restarts), then
+   **Settings → General → VPN & Device Management → [the Apple ID] → Trust**.
+6. Open the app and run the [part 6](#6-test-checklist) checklist.
+
+Limits of a free Apple ID: the app **stops opening after 7 days** (re-install with Sideloadly),
+at most 3 such apps per phone, and Apple may refuse the bundle ID if it's already registered to another team.
+
+> **If sign-in fails** with a keychain error (e.g. `-34018`), the re-signing didn't keep the Keychain
+> Sharing setting (`com.microsoft.adalcache`) that MSAL needs. Use workflow B, or build once on a borrowed Mac (parts 4–5).
+
+### B. TestFlight (`ios-testflight`, needs the paid membership)
+
+Install on the iPhone through TestFlight instead of part 5. One-time setup:
+
+1. **Apple Developer portal** → Certificates, Identifiers & Profiles → **Identifiers → +** → App IDs → App:
+   Bundle ID (explicit) `com.transworld.jets.feedback`. No extra capabilities are needed.
+2. **App Store Connect** → Apps → **+ New App**: iOS, name "Private Skies Feedback", that bundle ID, SKU `tw-feedback`.
+3. **App Store Connect** → Users and Access → **Integrations → App Store Connect API** → **+**: role **App Manager**.
+   Download the `.p8` file (only possible once) and note the Issuer ID and Key ID.
+4. **Codemagic** → Team settings → **Team integrations → Developer Portal → Connect**: upload the `.p8` with the
+   Issuer ID and Key ID, and name it exactly **`Transworld ASC`** (the name in `codemagic.yaml`).
+5. **Codemagic** → Team settings → **Code signing identities**:
+   * **iOS certificates → Generate certificate**, type *Apple Distribution*, using that API key.
+   * **iOS provisioning profiles → Fetch profiles**. If none is listed for the bundle ID, create one in the Apple portal
+     (**Profiles → +** → *App Store Connect* → the bundle ID → the certificate Codemagic generated), then fetch again.
+6. Push the repo (with `codemagic.yaml` at the root), and in Codemagic click **Check for configuration file**,
+   then **Start new build** → workflow *iOS → TestFlight*.
+7. When the build finishes (about 15–25 min, plus 15–30 min of Apple processing), go to **App Store Connect → TestFlight →
+   Internal Testing**, add yourself, and install from the **TestFlight** app on the iPhone. Then run the [part 6](#6-test-checklist) checklist.
+
+Each new push → **Start new build** gives a new TestFlight build. The build number comes from Codemagic's
+counter, and the visible version is `APP_VERSION` in `codemagic.yaml`.
 
 ---
 

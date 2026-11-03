@@ -114,4 +114,6 @@ native-android/            Java files to copy into android/app/src/main/java/com
 API-CONTRACT.md            what the app sends / expects (for the backend team)
 tools/serve.ps1            local preview server for Windows
 tools/android-keyhash.ps1  prints the Android signature hash for Entra + config.js
+tools/ios-setup.rb         does the Xcode setup steps automatically (used by Codemagic)
+codemagic.yaml             cloud iOS build → TestFlight, no Mac needed
 ```

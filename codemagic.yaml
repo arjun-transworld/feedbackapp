@@ -1,0 +1,74 @@
+# Codemagic: builds the iOS app on a cloud Mac. No Mac needed. See DEPLOY.md, "Building without a Mac".
+#   ios-unsigned:   no Apple account needed. Produces an unsigned .ipa to sign + install with a free Apple ID (Sideloadly)
+#   ios-testflight: needs the paid Apple Developer Program. Signs and uploads to TestFlight
+workflows:
+  ios-unsigned:
+    name: iOS unsigned .ipa (free Apple ID)
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+    environment:
+      node: 20
+      xcode: latest
+      cocoapods: default
+      vars:
+        APP_VERSION: 1.0.0
+    scripts:
+      - name: Install npm packages
+        script: npm install
+      - name: Create the iOS project and copy in www/
+        script: |
+          if [ ! -d ios ]; then npx cap add ios; fi
+          npx cap sync ios
+      - name: Native code, sign-in settings, Keychain Sharing (DEPLOY.md part 4b-4f)
+        script: |
+          gem list -i xcodeproj > /dev/null || gem install xcodeproj --no-document
+          ruby tools/ios-setup.rb
+      - name: Build unsigned .ipa
+        script: |
+          xcodebuild -workspace ios/App/App.xcworkspace -scheme App -configuration Release \
+            -destination 'generic/platform=iOS' -archivePath build/App.xcarchive archive \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY=""
+          mkdir -p build/Payload
+          cp -R build/App.xcarchive/Products/Applications/App.app build/Payload/
+          cd build && zip -qr PrivateSkiesFeedback-unsigned.ipa Payload
+    artifacts:
+      - build/PrivateSkiesFeedback-unsigned.ipa
+
+
+  ios-testflight:
+    name: iOS → TestFlight
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+    integrations:
+      app_store_connect: Transworld ASC   # must match the API key name in Codemagic → Team settings → Team integrations
+    environment:
+      node: 20
+      xcode: latest
+      cocoapods: default
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.transworld.jets.feedback
+      vars:
+        APP_VERSION: 1.0.0                # shown to users; BUILD_NUMBER comes from Codemagic's build counter
+    scripts:
+      - name: Install npm packages
+        script: npm install
+      - name: Create the iOS project and copy in www/
+        script: |
+          if [ ! -d ios ]; then npx cap add ios; fi
+          npx cap sync ios
+      - name: Native code, sign-in settings, Keychain Sharing (DEPLOY.md part 4b-4f)
+        script: |
+          gem list -i xcodeproj > /dev/null || gem install xcodeproj --no-document
+          ruby tools/ios-setup.rb
+      - name: Use signing profiles
+        script: xcode-project use-profiles
+      - name: Build ipa
+        script: xcode-project build-ipa --workspace ios/App/App.xcworkspace --scheme App
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true
