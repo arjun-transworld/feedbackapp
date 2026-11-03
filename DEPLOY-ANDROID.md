@@ -139,12 +139,11 @@ Inside the existing `dependencies { ... }` block, add:
 
 ```gradle
 implementation "androidx.work:work-runtime:2.9.1"
-implementation "com.microsoft.identity.client:msal:<VERSION>"
+implementation "com.microsoft.identity.client:msal:5.10.0"
 ```
 
-For `<VERSION>`, use **the same MSAL version the sign-in plugin uses**. Open
-`node_modules/@recognizebv/capacitor-plugin-msal/android/build.gradle` and copy the version from its
-`com.microsoft.identity.client:msal` line. Two different versions will conflict.
+That's Microsoft's MSAL library, used by `TokenProvider.java` for crew sign-in and background tokens.
+There's no separate sign-in plugin.
 
 ### 6c. MSAL's package feed: `android/build.gradle`
 
@@ -173,8 +172,6 @@ Inside `<application> ... </application>`, next to the existing `<activity>`, ad
     </intent-filter>
 </activity>
 ```
-
-Also check the [plugin's README](https://github.com/recognizegroup/capacitor-plugin-msal#android) for any extra Android steps in the version you installed.
 
 ✅ **Check:** click **File → Sync Project with Gradle Files**, then **Build → Make Project**. Both succeed.
 
@@ -253,7 +250,7 @@ adb shell cmd connectivity airplane-mode disable
 | `keytool not found` | Install Android Studio. The script uses its bundled Java |
 | `Keystore not found` (debug) | Build any project once in Android Studio (part 2 check) |
 | Gradle: `Could not find com.microsoft.identity.client:msal` | The Duo feed line is missing (6c) |
-| Gradle: duplicate class / version conflict on MSAL | Your `msal` version differs from the plugin's. Use the same (6b) |
+| Gradle: duplicate class / version conflict on MSAL | `msal` is listed twice with different versions in `app/build.gradle`. Keep one (6b) |
 | `cannot find symbol class Worker` / `WorkManager` | `work-runtime` dependency missing (6b) |
 | JS error `"BackgroundUpload" plugin is not implemented on android` | `MainActivity.java` wasn't replaced (6a), or its `package` line doesn't match `com.transworld.jets.feedback` |
 | Sign-in: *"The redirect URI in the configuration file doesn't match"* / *intent filter* error | The hash in `config.js`, the manifest `android:path` and Entra must all be the same, and the manifest path must start with `/` |

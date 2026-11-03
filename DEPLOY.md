@@ -120,10 +120,26 @@ cd FeedbackApp
 npm install
 npx cap add ios
 npx cap sync ios
+```
+
+Add Microsoft's **MSAL** library, used for crew sign-in and background tokens. Open `ios/App/Podfile`
+in a text editor and, inside `target 'App' do`, add a line below `capacitor_pods`:
+
+```ruby
+  pod 'MSAL', '~> 1.5'
+```
+
+Then install it and open Xcode:
+
+```bash
+cd ios/App && pod install && cd ../..
 npx cap open ios
 ```
 
 Xcode opens. In the left sidebar, **App → App** is where everything below happens.
+
+> **Shortcut:** `ruby tools/ios-setup.rb` (after `npx cap sync ios`) does the Podfile line, `pod install` and
+> steps 4b–4f automatically. Signing and Team (4d steps 1–2) still need to be set in Xcode.
 
 ### 4b. Add the native files
 
@@ -319,7 +335,7 @@ If the backend team changes `/feedback`, they must keep accepting the current pa
 |---|---|
 | Page looks unstyled when opened on Windows | You double-clicked `index.html`. Serve it: `powershell -ExecutionPolicy Bypass -File tools\serve.ps1` |
 | `npx: command not found` (Mac) | Install Node.js from nodejs.org and reopen Terminal |
-| Xcode: `No such module 'MSAL'` | Run `npx cap sync ios` again. If it persists: **File → Add Package Dependencies…** → `https://github.com/AzureAD/microsoft-authentication-library-for-objc` → add **MSAL** to the App target |
+| Xcode: `No such module 'MSAL'` | The `pod 'MSAL'` line is missing from `ios/App/Podfile`, or `pod install` wasn't run (4a). Open `App.xcworkspace`, not `App.xcodeproj` |
 | Xcode: `Cannot find 'BackgroundUploadPlugin' in scope` | The Swift files weren't added to the App target. Select each file → right panel **Target Membership** → tick **App** |
 | JS error `BackgroundUpload plugin is not implemented on ios` | Main.storyboard's class isn't set to `MainViewController` (step 4c) |
 | Sign-in opens but never returns to the app | The Info.plist URL scheme is missing (4e), or the iOS platform isn't added in Entra (part 1) |

@@ -1,4 +1,4 @@
-# Does the manual Xcode steps from DEPLOY.md part 4b-4f, so the iOS app can be built
+# Does the manual Xcode steps from DEPLOY.md part 4b-4f (plus adding MSAL), so the iOS app can be built
 # on a cloud Mac (codemagic.yaml) without opening Xcode. Safe to run more than once.
 # Run after `npx cap add ios` / `npx cap sync ios`:  ruby tools/ios-setup.rb
 require 'fileutils'
@@ -65,4 +65,15 @@ plist['CFBundleDisplayName'] = 'Private Skies Feedback'
 plist['ITSAppUsesNonExemptEncryption'] = false
 Xcodeproj::Plist.write_to_path(plist, plist_path)
 
-puts 'iOS project set up: native files, MainViewController, Keychain Sharing, Info.plist, version.'
+# Microsoft's MSAL library, used by TokenProvider.swift for sign-in and background tokens.
+# `npx cap sync` only rewrites the capacitor_pods block, so this line survives later syncs.
+podfile = File.join(root, 'ios/App/Podfile')
+pods = File.read(podfile)
+unless pods.include?("pod 'MSAL'")
+  pods = pods.sub(/^(\s*)capacitor_pods\s*$/) { "#{$&}\n#{$1}pod 'MSAL', '~> 1.5'" }
+  abort 'Could not add MSAL to the Podfile' unless pods.include?("pod 'MSAL'")
+  File.write(podfile, pods)
+end
+system('pod install', chdir: File.join(root, 'ios/App')) or abort 'pod install failed'
+
+puts 'iOS project set up: native files, MainViewController, Keychain Sharing, Info.plist, version, MSAL.'

@@ -36,7 +36,8 @@ What the backend must provide is in [API-CONTRACT.md](API-CONTRACT.md).
   waits for connectivity itself, and keeps trying while the app is suspended or killed by the system.
 * **Tokens on behalf of the user.** Access tokens last about an hour, but an upload may wait
   days for a connection. So the token is **not** taken from JS when the form is saved. Instead,
-  the Swift `TokenProvider` reads the same MSAL keychain cache the sign-in plugin wrote to:
+  sign-in and the background uploader share one MSAL setup (`TokenProvider`, using Microsoft's MSAL
+  library directly, with no third-party sign-in plugin) and its keychain cache:
   * When a request is queued, it attaches a cached token if one is still valid. Offline, it
     may have none.
   * If the server answers **401**, iOS relaunches the app in the background. MSAL then
@@ -101,14 +102,14 @@ www/                       web app (also runs in a normal browser)
   static/js/               shared transworld-auth.js + msal-browser
 native-ios/                Swift files to add to the Xcode project
   BackgroundUploader.swift background URLSession, retries, results
-  TokenProvider.swift      silent MSAL token for the signed-in user
-  BackgroundUploadPlugin.swift  JS bridge
+  TokenProvider.swift      crew sign-in + silent MSAL token for the signed-in user
+  BackgroundUploadPlugin.swift  JS bridge (signIn, enqueue, getState, clearResults)
   MainViewController.swift registers the plugin
   replace/AppDelegate.swift     paste over the generated AppDelegate
 native-android/            Java files to copy into android/app/src/main/java/com/transworld/jets/feedback/
   UploadQueue.java         WorkManager queue + results store
   UploadWorker.java        sends one record (runs with the app closed)
-  TokenProvider.java       silent MSAL token for the signed-in user
+  TokenProvider.java       crew sign-in + silent MSAL token for the signed-in user
   BackgroundUploadPlugin.java   JS bridge (same API as iOS)
   MainActivity.java        replaces the generated one; registers the plugin
 API-CONTRACT.md            what the app sends / expects (for the backend team)

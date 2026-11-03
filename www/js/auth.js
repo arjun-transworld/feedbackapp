@@ -3,9 +3,10 @@
 //
 // Browser:   the shared TransworldAuth (MSAL.js).
 // iOS / Android app: MSAL.js redirects do not work inside the app's WebView, so
-//            sign-in uses the native MSAL plugin. The native uploader then gets fresh
-//            tokens from the same MSAL cache on its own, so queued uploads still go out
-//            with a valid token on behalf of the user, even hours later with the app closed.
+//            sign-in goes through our own native code (BackgroundUpload.signIn, using
+//            Microsoft's MSAL library). The native uploader then gets fresh tokens from the
+//            same MSAL cache on its own, so queued uploads still go out with a valid token
+//            on behalf of the user, even hours later with the app closed.
 
 import { ENTRA, isConfigured } from "./config.js";
 import { getJSON, setJSON } from "./store.js";
@@ -44,14 +45,14 @@ function initWebAuth() {
 export async function signIn() {
   if (!isConfigured) throw new Error(NOT_CONFIGURED);
   if (isNative) {
-    const result = await window.Capacitor.Plugins.MsAuthPlugin.login({
+    const result = await window.Capacitor.Plugins.BackgroundUpload.signIn({
       clientId: ENTRA.clientId,
-      tenant: ENTRA.tenantId,
-      scopes: [ENTRA.scope],
+      tenantId: ENTRA.tenantId,
+      scope: ENTRA.scope,
       keyHash: ENTRA.androidKeyHash, // Android only; ignored on iOS
     });
-    const claims = decodeJwt(result.idToken || result.accessToken);
-    setJSON(ACCOUNT_KEY, { name: claims.name, username: claims.preferred_username || claims.upn });
+    const claims = result.idToken ? decodeJwt(result.idToken) : {};
+    setJSON(ACCOUNT_KEY, { name: claims.name, username: claims.preferred_username || claims.upn || result.username });
     return true;
   }
   return !!(await getAccessToken()); // redirects to Microsoft sign-in if needed

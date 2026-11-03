@@ -11,12 +11,36 @@ import org.json.JSONObject;
 
 /**
  * JS bridge: window.Capacitor.Plugins.BackgroundUpload — same API as the iOS plugin.
+ *   signIn({ clientId, tenantId, scope, keyHash }) -> { idToken, username }: Microsoft sign-in (crew)
  *   enqueue({ id, url, headers, body, auth: { clientId, tenantId, scope, keyHash } })
  *   getState()          -> { results: [{id, status, at}], active: [id] }
  *   clearResults({ ids })
  */
 @CapacitorPlugin(name = "BackgroundUpload")
 public class BackgroundUploadPlugin extends Plugin {
+
+    @PluginMethod
+    public void signIn(PluginCall call) {
+        String clientId = call.getString("clientId");
+        String tenantId = call.getString("tenantId");
+        String scope = call.getString("scope");
+        String keyHash = call.getString("keyHash");
+        if (clientId == null || tenantId == null || scope == null || keyHash == null || keyHash.isEmpty()) {
+            call.reject("clientId, tenantId, scope and keyHash are required");
+            return;
+        }
+        TokenProvider.configure(getContext(), clientId, tenantId, scope, keyHash);
+        TokenProvider.signIn(getActivity(), (result, error) -> {
+            if (result == null) {
+                call.reject(error != null ? error.getMessage() : "Sign-in failed");
+                return;
+            }
+            JSObject ret = new JSObject();
+            ret.put("idToken", result.getAccount().getIdToken());
+            ret.put("username", result.getAccount().getUsername());
+            call.resolve(ret);
+        });
+    }
 
     @PluginMethod
     public void enqueue(PluginCall call) {
