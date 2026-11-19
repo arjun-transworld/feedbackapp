@@ -40,7 +40,7 @@ public class BackgroundUploadPlugin: CAPPlugin, CAPBridgedPlugin {
         guard let error = error as NSError? else { return "Sign-in failed" }
         var parts = [error.userInfo[MSALErrorDescriptionKey] as? String ?? error.localizedDescription,
                      "(\(error.domain) \(error.code)"]
-        if let internal = error.userInfo[MSALInternalErrorCodeKey] { parts[1] += ", internal \(internal)" }
+        if let internalCode = error.userInfo[MSALInternalErrorCodeKey] { parts[1] += ", internal \(internalCode)" }
         if let underlying = error.userInfo[NSUnderlyingErrorKey] as? NSError {
             parts[1] += ", \(underlying.domain) \(underlying.code)"
         }
