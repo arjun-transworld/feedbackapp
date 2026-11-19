@@ -59,7 +59,7 @@ What the backend must provide is in [API-CONTRACT.md](API-CONTRACT.md).
 | **User force-quits the app (swipes it away)** | iOS cancels pending transfers. They are re-queued automatically the next time the app opens. Brief crew: *don't swipe the app away* |
 | Low Power Mode or poor network | iOS may delay uploads; they still go eventually |
 | Refresh token no longer valid (90 days unused, password reset, account disabled, Conditional Access) | Silent refresh fails, so the upload ends with 401. Records stay pending and the status bar shows "crew sign-in needed". After **Crew sign in**, they are resent |
-| Server rejects data (400/422) | Marked `rejected` locally and not retried |
+| Server rejects data (400/404/422) | Marked `rejected` locally; the top bar shows it. Resent with the next submission, or with **Retry rejected** in the Crew panel |
 
 ## Configuration — where things are set
 

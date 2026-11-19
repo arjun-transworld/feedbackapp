@@ -38,16 +38,26 @@ function applyResult(id, status, at = Date.now()) {
   } else if (status === 401 || status === 403) {
     store.setJSON(AUTH_PROBLEM, true); // stays pending; resent after crew signs in again
   } else if (status >= 400 && status < 500 && status !== 408 && status !== 429) {
-    store.update(id, { status: "rejected", lastError: "HTTP " + status }); // bad data; never retried
+    store.update(id, { status: "rejected", lastError: "HTTP " + status }); // resent with the next submission or "Retry rejected"
   }
 }
 
-/** Saves a submission locally and hands it to the uploader. */
+// Rejected records go back to pending, so they are sent again. Returns them.
+function requeueRejected() {
+  const rejected = store.all().filter((r) => r.status === "rejected");
+  for (const r of rejected) store.update(r.id, { status: "pending", lastError: undefined });
+  return rejected;
+}
+
+/** Saves a submission locally and hands it to the uploader, together with any earlier rejected ones. */
 export async function submit(payload) {
+  const retried = requeueRejected();
   const record = store.add(payload);
   changed();
   if (isNative) {
-    await enqueueNative(record).catch((e) => console.warn("[sync] enqueue failed", e));
+    for (const r of [...retried, record]) {
+      await enqueueNative(r).catch((e) => console.warn("[sync] enqueue failed", e));
+    }
   } else {
     flushWeb();
   }
@@ -117,9 +127,7 @@ export async function reconcile() {
 
 /** Crew action: send rejected records again, e.g. after the server address or endpoint was fixed. */
 export function retryRejected() {
-  for (const r of store.all()) {
-    if (r.status === "rejected") store.update(r.id, { status: "pending", lastError: undefined });
-  }
+  requeueRejected();
   return reconcile();
 }
 

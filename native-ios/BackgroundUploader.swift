@@ -49,7 +49,7 @@ final class BackgroundUploader: NSObject, URLSessionDataDelegate {
             return completion(error)
         }
         session.getAllTasks { tasks in
-            if !tasks.contains(where: { Self.parse($0.taskDescription).id == id }) {
+            if !tasks.contains(where: { $0.state != .completed && Self.parse($0.taskDescription).id == id }) {
                 self.startTask(id: id, request: request, attempt: 0)
             }
             completion(nil)
@@ -92,10 +92,26 @@ final class BackgroundUploader: NSObject, URLSessionDataDelegate {
             record(id: id, status: status)
             try? FileManager.default.removeItem(at: bodyURL(id))
         } else if let request = task.originalRequest, hasBody {
-            // Network failure, 5xx, throttling, or cancelled (e.g. force-quit):
-            // back off 15 min, 30 min, ... up to 6 h. The token is refreshed at that point.
-            let delay = min(15 * 60 * pow(2, Double(attempt)), 6 * 3600)
-            startTask(id: id, request: request, attempt: attempt + 1, delay: delay)
+            if (error as NSError?)?.code == NSURLErrorCancelled {
+                // Cancelled, not failed: iOS cancels every transfer when the user swipes the app
+                // away, and reports it on the next launch. Queue it again now, not after a backoff.
+                restartIfNotQueued(id: id, request: request, attempt: attempt)
+            } else {
+                // Network failure, 5xx or throttling: back off 15 min, 30 min, ... up to 6 h.
+                // The token is refreshed at that point.
+                let delay = min(15 * 60 * pow(2, Double(attempt)), 6 * 3600)
+                startTask(id: id, request: request, attempt: attempt + 1, delay: delay)
+            }
+        }
+    }
+
+    /// The JS side may already have re-queued this record on launch; don't send it twice.
+    private func restartIfNotQueued(id: String, request: URLRequest, attempt: Int) {
+        work.enter()
+        session.getAllTasks { tasks in
+            let queued = tasks.contains { $0.state != .completed && Self.parse($0.taskDescription).id == id }
+            if !queued { self.startTask(id: id, request: request, attempt: attempt) }
+            self.work.leave()
         }
     }
 
@@ -116,7 +132,7 @@ final class BackgroundUploader: NSObject, URLSessionDataDelegate {
     /// Finished records ([{id, status, at}]) and ids of transfers still queued in iOS.
     func state(completion: @escaping ([[String: Any]], [String]) -> Void) {
         session.getAllTasks { tasks in
-            let active = tasks.compactMap { Self.parse($0.taskDescription).id }
+            let active = tasks.filter { $0.state != .completed }.compactMap { Self.parse($0.taskDescription).id }
             let results = self.stateQueue.sync { self.loadResults() }
                 .map { ["id": $0.key, "status": $0.value.status, "at": $0.value.at] as [String: Any] }
             completion(results, active)

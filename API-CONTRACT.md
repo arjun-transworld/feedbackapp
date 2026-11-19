@@ -57,14 +57,14 @@ Authorization: Bearer <Entra access token of the signed-in crew member>
 | **2xx** (200 or 201) | Done. Record marked *sent*, and it's deleted from the device after 7 days. The response body is ignored |
 | **401** | Gets a fresh token silently and resends straight away (up to 2 times). Still 401 after that → the record stays on the device and the status shows "crew sign-in needed" |
 | **403** | Record stays on the device; the status shows "crew sign-in needed" |
-| **400 / 404 / 409 / 422** (other 4xx) | Record marked *rejected* on the device and **never resent** |
+| **400 / 404 / 409 / 422** (other 4xx) | Record marked *rejected* on the device. Not retried on a timer, but **resent with the next submission** (or when crew tap *Retry rejected*). A record the server keeps refusing is resent each time |
 | **408, 429, 5xx, timeout, no network** | Resent automatically: 15 min, 30 min, 1 h … up to every 6 h |
 
 ### Requirements for the backend
 
 1. **Duplicates must return 2xx.** The same `id` can arrive more than once, for example when a
    response is lost on a bad connection and the device resends. Store it once, and answer
-   **200** for a repeat. Answering 409 makes the device mark it *rejected*.
+   **200** for a repeat. Answering 409 makes the device mark it *rejected* and send it again with every later submission.
 2. **Accept old `createdAt` values.** Records can arrive days after they were filled in.
 3. **Validate the token** as for other Transworld APIs (signature, `iss`, `aud`).
    An expired token **must** return **401**, not 403 or 500. That's what makes the app refresh it.
