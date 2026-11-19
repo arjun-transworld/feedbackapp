@@ -161,8 +161,8 @@ Xcode opens. In the left sidebar, **App → App** is where everything below happ
 1. Click the blue **App** project at the top of the sidebar → under **TARGETS** select **App** → open the **Signing & Capabilities** tab.
 2. Tick **Automatically manage signing**, and choose your company **Team**. (For a quick personal test, your own Apple ID also works.)
 3. Check that **Bundle Identifier** is `com.transworld.jets.feedback`.
-4. Click **+ Capability** → **Keychain Sharing** → under Keychain Groups click **+** and enter `com.microsoft.adalcache`.
-   *This is required. It lets the background uploader use the crew member's sign-in.*
+
+No extra capabilities are needed. MSAL keeps the sign-in in the app's own keychain storage.
 
 ### 4e. Microsoft sign-in settings (Info.plist)
 
@@ -221,8 +221,7 @@ signs it with a free Apple ID and installs it over USB.
 Limits of a free Apple ID: the app **stops opening after 7 days** (re-install with Sideloadly),
 at most 3 such apps per phone, and Apple may refuse the bundle ID if it's already registered to another team.
 
-> **If sign-in fails** with a keychain error (e.g. `-34018`), the re-signing didn't keep the Keychain
-> Sharing setting (`com.microsoft.adalcache`) that MSAL needs. Use workflow B, or build once on a borrowed Mac (parts 4–5).
+> **If sign-in fails**, the pop-up shows MSAL's reason and error codes. Send them to whoever maintains the app.
 
 ### B. TestFlight (`ios-testflight`, needs the paid membership)
 
@@ -340,7 +339,7 @@ If the backend team changes `/feedback`, they must keep accepting the current pa
 | JS error `BackgroundUpload plugin is not implemented on ios` | Main.storyboard's class isn't set to `MainViewController` (step 4c) |
 | Sign-in opens but never returns to the app | The Info.plist URL scheme is missing (4e), or the iOS platform isn't added in Entra (part 1) |
 | Sign-in error **AADSTS50011** (redirect URI mismatch) | The bundle ID in Xcode doesn't match the one registered in Entra |
-| Status always "crew sign-in needed" after signing in | Keychain Sharing group `com.microsoft.adalcache` missing (4d) |
+| Sign-in pop-up `MSALErrorDomain -50000` | MSAL internal error. The rest of the message gives the reason (keychain, redirect scheme in Info.plist, or bundle ID changed while sideloading) |
 | Top bar says "setup needed: Entra settings in config.js" | The placeholder zeros in `www/js/config.js` weren't replaced, or `ACTIVE` points to an environment you didn't fill in. Fix, then `npx cap sync ios` |
 | Sign-in error **AADSTS65001 / AADSTS650057** (consent / invalid resource) | `scope` is wrong or not granted. Check part 1, steps 4–5 |
 | Signed in, but items go to "crew sign-in needed" straight away | The server rejects the token (401/403). Usually the `scope` in `config.js` doesn't match the audience the backend expects. Give the backend team a token to compare (they can paste it into jwt.ms) |

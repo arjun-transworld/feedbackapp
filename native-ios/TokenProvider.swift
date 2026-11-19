@@ -5,9 +5,12 @@ import MSAL
 /// Crew sign-in and access tokens for the signed-in crew member.
 ///
 /// Sign-in (interactive) and the background uploader (silent) use this one MSAL setup and
-/// its keychain cache (default group "com.microsoft.adalcache"), so whoever signed in through
-/// the app is the user these uploads are sent on behalf of. MSAL returns the cached access
-/// token while it is valid, and otherwise uses the refresh token, which needs network.
+/// its keychain cache, so whoever signed in through the app is the user these uploads are
+/// sent on behalf of. MSAL returns the cached access token while it is valid, and otherwise
+/// uses the refresh token, which needs network.
+///
+/// The cache lives in the app's own keychain group (its bundle ID), which every app has
+/// without the Keychain Sharing capability. Nothing else needs to read it.
 enum TokenProvider {
     private static let configKey = "TokenProvider.authConfig"
 
@@ -25,10 +28,11 @@ enum TokenProvider {
         guard let cfg = UserDefaults.standard.dictionary(forKey: configKey) as? [String: String],
               let clientId = cfg["clientId"], let tenantId = cfg["tenantId"], let scope = cfg["scope"],
               let authorityURL = URL(string: "https://login.microsoftonline.com/\(tenantId)"),
-              let authority = try? MSALAADAuthority(url: authorityURL),
-              let app = try? MSALPublicClientApplication(configuration:
-                  MSALPublicClientApplicationConfig(clientId: clientId, redirectUri: nil, authority: authority))
+              let authority = try? MSALAADAuthority(url: authorityURL)
         else { return nil }
+        let config = MSALPublicClientApplicationConfig(clientId: clientId, redirectUri: nil, authority: authority)
+        if let bundleId = Bundle.main.bundleIdentifier { config.cacheConfig.keychainSharingGroup = bundleId }
+        guard let app = try? MSALPublicClientApplication(configuration: config) else { return nil }
         return (app, scope)
     }
 

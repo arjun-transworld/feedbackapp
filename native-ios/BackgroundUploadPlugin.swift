@@ -1,5 +1,6 @@
 import Foundation
 import Capacitor
+import MSAL
 
 /// JS bridge: window.Capacitor.Plugins.BackgroundUpload
 ///   signIn({ clientId, tenantId, scope }) -> { idToken, username }: Microsoft sign-in sheet (crew)
@@ -28,10 +29,22 @@ public class BackgroundUploadPlugin: CAPPlugin, CAPBridgedPlugin {
         DispatchQueue.main.async {
             guard let viewController = self.bridge?.viewController else { return call.reject("App is not ready") }
             TokenProvider.signIn(from: viewController) { result, error in
-                guard let result = result else { return call.reject(error?.localizedDescription ?? "Sign-in failed") }
+                guard let result = result else { return call.reject(Self.describe(error)) }
                 call.resolve(["idToken": result.idToken ?? "", "username": result.account.username ?? ""])
             }
         }
+    }
+
+    /// MSAL's localizedDescription is only "MSALErrorDomain error -50000"; the reason is in userInfo.
+    private static func describe(_ error: Error?) -> String {
+        guard let error = error as NSError? else { return "Sign-in failed" }
+        var parts = [error.userInfo[MSALErrorDescriptionKey] as? String ?? error.localizedDescription,
+                     "(\(error.domain) \(error.code)"]
+        if let internal = error.userInfo[MSALInternalErrorCodeKey] { parts[1] += ", internal \(internal)" }
+        if let underlying = error.userInfo[NSUnderlyingErrorKey] as? NSError {
+            parts[1] += ", \(underlying.domain) \(underlying.code)"
+        }
+        return parts[0] + " " + parts[1] + ")"
     }
 
     @objc func enqueue(_ call: CAPPluginCall) {

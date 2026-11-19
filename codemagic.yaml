@@ -19,7 +19,7 @@ workflows:
         script: |
           if [ ! -d ios ]; then npx cap add ios; fi
           npx cap sync ios
-      - name: Native code, sign-in settings, Keychain Sharing (DEPLOY.md part 4b-4f)
+      - name: Native code, sign-in settings, MSAL (DEPLOY.md part 4a-4f)
         script: |
           gem list -i xcodeproj > /dev/null || gem install xcodeproj --no-document
           ruby tools/ios-setup.rb
@@ -57,7 +57,7 @@ workflows:
         script: |
           if [ ! -d ios ]; then npx cap add ios; fi
           npx cap sync ios
-      - name: Native code, sign-in settings, Keychain Sharing (DEPLOY.md part 4b-4f)
+      - name: Native code, sign-in settings, MSAL (DEPLOY.md part 4a-4f)
         script: |
           gem list -i xcodeproj > /dev/null || gem install xcodeproj --no-document
           ruby tools/ios-setup.rb
