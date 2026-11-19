@@ -88,19 +88,26 @@ $("crew-signin").addEventListener("click", async () => {
 });
 
 $("crew-sync").addEventListener("click", () => sync.reconcile());
+$("crew-retry").addEventListener("click", () => sync.retryRejected());
 
 // ---- Status -----------------------------------------------------------------
 
 function renderStatus() {
   const records = store.all();
   const pending = records.filter((r) => r.status === "pending").length;
+  const rejected = records.filter((r) => r.status === "rejected");
   const el = $("sync-status");
+  $("crew-retry").hidden = !rejected.length;
 
   if (!isConfigured) {
     el.textContent = `${pending} waiting · setup needed: Entra settings in config.js`;
     el.className = "sync problem";
   } else if (sync.hasAuthProblem()) {
     el.textContent = `${pending} waiting · crew sign-in needed`;
+    el.className = "sync problem";
+  } else if (rejected.length) {
+    el.textContent = (pending ? `${pending} waiting · ` : "") +
+      `${rejected.length} not accepted by server (${rejected[0].lastError}) · open Crew to retry`;
     el.className = "sync problem";
   } else if (pending) {
     el.textContent = `${pending} waiting to send` + (isNative ? " (sends automatically)" : "");
@@ -117,10 +124,12 @@ function renderStatus() {
   const unsent = records.filter((r) => r.status !== "sent");
   const sent = records.filter((r) => r.status === "sent")
     .sort((a, b) => b.sentAt.localeCompare(a.sentAt)).slice(0, 10);
-  $("queue-list").innerHTML = [
-    ...unsent.map((r) => `<li>Saved ${time(r.createdAt)} · ${r.payload.route || "no route"} · ${r.status}${r.lastError ? " (" + r.lastError + ")" : ""}</li>`),
-    ...sent.map((r) => `<li>Saved ${time(r.createdAt)} · sent ${time(r.sentAt)}</li>`),
-  ].join("");
+  // textContent, not innerHTML: the route is typed in on the device and must never run as HTML.
+  const li = (text) => Object.assign(document.createElement("li"), { textContent: text });
+  $("queue-list").replaceChildren(
+    ...unsent.map((r) => li(`Saved ${time(r.createdAt)} · ${r.payload.route || "no route"} · ${r.status}${r.lastError ? ` (${r.lastError})` : ""}`)),
+    ...sent.map((r) => li(`Saved ${time(r.createdAt)} · sent ${time(r.sentAt)}`)),
+  );
 }
 
 sync.onChange(renderStatus);

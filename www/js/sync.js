@@ -115,6 +115,14 @@ export async function reconcile() {
   changed();
 }
 
+/** Crew action: send rejected records again, e.g. after the server address or endpoint was fixed. */
+export function retryRejected() {
+  for (const r of store.all()) {
+    if (r.status === "rejected") store.update(r.id, { status: "pending", lastError: undefined });
+  }
+  return reconcile();
+}
+
 export function startTriggers() {
   window.addEventListener("online", reconcile);
   document.addEventListener("visibilitychange", () => document.visibilityState === "visible" && reconcile());
