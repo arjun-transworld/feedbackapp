@@ -21,18 +21,18 @@ const ENVIRONMENTS = {
   dev: {
     feedbackUrl: "https://test-coral-tau-34.vercel.app/test",
     entra: {
-      clientId: "d802aa12-690f-4281-9076-804109081af3",
-      tenantId: "76ae1d97-467c-42c2-86d2-9ccea3131137",
-      scope: "api://d802aa12-690f-4281-9076-804109081af3/UserAccess",
+      clientId: "76ae1d97-467c-42c2-86d2-9ccea3131137",
+      tenantId: "d802aa12-690f-4281-9076-804109081af3",
+      scope: "api://76ae1d97-467c-42c2-86d2-9ccea3131137/UserAccess",
       androidKeyHash: "", // debug key (emulator / Android Studio Run)
     },
   },
   prod: {
     feedbackUrl: "https://test-coral-tau-34.vercel.app/test",
     entra: {
-      clientId: "d802aa12-690f-4281-9076-804109081af3",
-      tenantId: "76ae1d97-467c-42c2-86d2-9ccea3131137",
-      scope: "api://d802aa12-690f-4281-9076-804109081af3/UserAccess",
+      clientId: "76ae1d97-467c-42c2-86d2-9ccea3131137",
+      tenantId: "d802aa12-690f-4281-9076-804109081af3",
+      scope: "api://76ae1d97-467c-42c2-86d2-9ccea3131137/UserAccess",
       androidKeyHash: "", // debug key (emulator / Android Studio Run)
     },
   },
