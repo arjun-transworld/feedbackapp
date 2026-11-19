@@ -30,10 +30,26 @@ unless xml.include?('customClass="MainViewController"')
   File.write(storyboard, xml)
 end
 
-# 4d. No Keychain Sharing needed: MSAL keeps its cache in the app's own keychain group (TokenProvider.swift).
+# 4d. Entitlements: only the app's own keychain group, which is where MSAL keeps its cache
+# (TokenProvider.swift). No shared group is needed, but keep the file: a build without any
+# entitlements failed to sideload ("StopIteration") while the earlier build with them installed.
+File.write(File.join(app_dir, 'App.entitlements'), <<~XML)
+  <?xml version="1.0" encoding="UTF-8"?>
+  <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+  <plist version="1.0">
+  <dict>
+    <key>keychain-access-groups</key>
+    <array>
+      <string>$(AppIdentifierPrefix)$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+    </array>
+  </dict>
+  </plist>
+XML
+group.new_reference('App.entitlements') unless group.files.any? { |r| r.path == 'App.entitlements' }
 
 # 4f. Version and build number
 target.build_configurations.each do |config|
+  config.build_settings['CODE_SIGN_ENTITLEMENTS'] = 'App/App.entitlements'
   config.build_settings['MARKETING_VERSION'] = ENV['APP_VERSION'] || '1.0.0'
   config.build_settings['CURRENT_PROJECT_VERSION'] = ENV['BUILD_NUMBER'] || '1'
 end
