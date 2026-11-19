@@ -24,6 +24,11 @@ enum TokenProvider {
         UserDefaults.standard.set(["clientId": clientId, "tenantId": tenantId, "scope": scope], forKey: configKey)
     }
 
+    /// For the uploader's connection check (Microsoft's public sign-in metadata for this tenant).
+    static var tenantId: String? {
+        (UserDefaults.standard.dictionary(forKey: configKey) as? [String: String])?["tenantId"]
+    }
+
     private static func makeApp() -> (app: MSALPublicClientApplication, scope: String)? {
         guard let cfg = UserDefaults.standard.dictionary(forKey: configKey) as? [String: String],
               let clientId = cfg["clientId"], let tenantId = cfg["tenantId"], let scope = cfg["scope"],

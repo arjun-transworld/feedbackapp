@@ -2,16 +2,25 @@ import Foundation
 
 /// Owns the background URLSession that sends feedback records.
 ///
-/// iOS performs these uploads out-of-process: it waits for connectivity on its
+/// iOS performs these transfers out-of-process: it waits for connectivity on its
 /// own, keeps going while the app is suspended or terminated by the system, and
 /// relaunches the app in the background to report results. (A user force-quit
-/// cancels pending transfers; the JS side re-queues them on next launch.)
+/// cancels pending transfers; they are queued again on the next launch.)
 ///
-/// Every attempt carries the signed-in user's MSAL access token (see TokenProvider).
-/// A 401 from an expired token triggers a silent refresh and an immediate resend.
-final class BackgroundUploader: NSObject, URLSessionDataDelegate {
+/// A record is never sent without the signed-in user's access token. Each attempt has two steps:
+///  1. Connection check: a background download of the tenant's public sign-in metadata from
+///     Microsoft. It carries no feedback and no token. It only finishes once the device is
+///     online, and iOS relaunches the app when it does.
+///  2. Upload: a token is fetched right then (MSAL refreshes it if needed, now that there is
+///     network) and the record is sent with it. No token: nothing is sent, and the record waits
+///     for crew to sign in again (reported to JS as 401, "crew sign-in needed").
+/// A 401 from the server triggers a forced token refresh and an immediate resend (up to 2 times).
+final class BackgroundUploader: NSObject, URLSessionDataDelegate, URLSessionDownloadDelegate {
     static let shared = BackgroundUploader()
     static let sessionId = "com.transworld.jets.feedback.upload"
+
+    /// Recorded when no token can be had; JS treats it like a 401 ("crew sign-in needed").
+    private static let noTokenStatus = 401
 
     /// Set by AppDelegate when iOS relaunches us to deliver session events.
     var backgroundCompletionHandler: (() -> Void)?
@@ -45,73 +54,79 @@ final class BackgroundUploader: NSObject, URLSessionDataDelegate {
         do {
             // Readable while the device is locked (after first unlock), so uploads can run in a pocket.
             try body.write(to: bodyURL(id), options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
+            let saved: [String: Any] = ["url": request.url?.absoluteString ?? "",
+                                        "headers": request.allHTTPHeaderFields ?? [:]]
+            try JSONSerialization.data(withJSONObject: saved)
+                .write(to: requestURL(id), options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
         } catch {
             return completion(error)
         }
         session.getAllTasks { tasks in
-            if !tasks.contains(where: { $0.state != .completed && Self.parse($0.taskDescription).id == id }) {
-                self.startTask(id: id, request: request, attempt: 0)
-            }
+            if !Self.isQueued(id, in: tasks) { self.checkConnection(id: id, attempt: 0) }
             completion(nil)
         }
     }
 
-    /// Tracks token fetches still running, so iOS doesn't suspend us before the retry is queued.
+    /// Tracks token fetches still running, so iOS doesn't suspend us before the upload is queued.
     private let work = DispatchGroup()
 
-    /// Attaches a fresh user token (if one can be had right now) and queues the upload.
-    /// With no token — e.g. offline with an expired token — the request still goes out
-    /// once online, gets 401, and is retried immediately with a refreshed token.
-    private func startTask(id: String, request: URLRequest, attempt: Int, authRetries: Int = 0, delay: TimeInterval = 0) {
+    /// Step 1. Finishes once the device is online (not before `delay`, for retries).
+    private func checkConnection(id: String, attempt: Int, delay: TimeInterval = 0) {
+        guard let tenantId = TokenProvider.tenantId,
+              let url = URL(string: "https://login.microsoftonline.com/\(tenantId)/v2.0/.well-known/openid-configuration")
+        else { return finish(id: id, status: Self.noTokenStatus) }
+        let task = session.downloadTask(with: url)
+        task.taskDescription = "\(id)|\(attempt)|0|check"
+        if delay > 0 { task.earliestBeginDate = Date().addingTimeInterval(delay) }
+        task.resume()
+    }
+
+    /// Step 2. The device is online: send with a token fetched now, or don't send at all.
+    private func upload(id: String, attempt: Int, authRetries: Int = 0) {
+        guard var request = savedRequest(id) else { return }
         work.enter()
         TokenProvider.token(forceRefresh: authRetries > 0) { token in
-            var request = request
-            request.setValue(token.map { "Bearer \($0)" }, forHTTPHeaderField: "Authorization")
+            defer { self.work.leave() }
+            guard let token = token else { return self.finish(id: id, status: Self.noTokenStatus) }
+            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
             let task = self.session.uploadTask(with: request, fromFile: self.bodyURL(id))
             task.taskDescription = "\(id)|\(attempt)|\(authRetries)"
-            if delay > 0 { task.earliestBeginDate = Date().addingTimeInterval(delay) }
             task.resume()
-            self.work.leave()
         }
     }
 
     // MARK: - Delegate
 
-    func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
-        let (id, attempt, authRetries) = Self.parse(task.taskDescription)
-        guard let id = id else { return }
-        let status = (task.response as? HTTPURLResponse)?.statusCode
-        let hasBody = FileManager.default.fileExists(atPath: bodyURL(id).path)
-
-        if status == 401, authRetries < 2, let request = task.originalRequest, hasBody {
-            // Token missing or expired: refresh silently and resend now.
-            startTask(id: id, request: request, attempt: attempt, authRetries: authRetries + 1)
-        } else if let status = status, error == nil, status < 500, status != 408, status != 429 {
-            // Final answer from the server (2xx success, or 4xx the JS side decides about,
-            // including 401 when the user must sign in again).
-            record(id: id, status: status)
-            try? FileManager.default.removeItem(at: bodyURL(id))
-        } else if let request = task.originalRequest, hasBody {
-            if (error as NSError?)?.code == NSURLErrorCancelled {
-                // Cancelled, not failed: iOS cancels every transfer when the user swipes the app
-                // away, and reports it on the next launch. Queue it again now, not after a backoff.
-                restartIfNotQueued(id: id, request: request, attempt: attempt)
-            } else {
-                // Network failure, 5xx or throttling: back off 15 min, 30 min, ... up to 6 h.
-                // The token is refreshed at that point.
-                let delay = min(15 * 60 * pow(2, Double(attempt)), 6 * 3600)
-                startTask(id: id, request: request, attempt: attempt + 1, delay: delay)
-            }
-        }
+    func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask, didFinishDownloadingTo location: URL) {
+        // Connection check only; the downloaded metadata isn't needed.
     }
 
-    /// The JS side may already have re-queued this record on launch; don't send it twice.
-    private func restartIfNotQueued(id: String, request: URLRequest, attempt: Int) {
-        work.enter()
-        session.getAllTasks { tasks in
-            let queued = tasks.contains { $0.state != .completed && Self.parse($0.taskDescription).id == id }
-            if !queued { self.startTask(id: id, request: request, attempt: attempt) }
-            self.work.leave()
+    func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
+        let (id, attempt, authRetries, isCheck) = Self.parse(task.taskDescription)
+        guard let id = id, FileManager.default.fileExists(atPath: bodyURL(id).path) else { return }
+        let status = (task.response as? HTTPURLResponse)?.statusCode
+
+        if (error as NSError?)?.code == NSURLErrorCancelled {
+            // Cancelled, not failed: iOS cancels every transfer when the user swipes the app
+            // away, and reports it on the next launch. Start again now, not after a backoff.
+            restartIfNotQueued(id: id)
+        } else if isCheck {
+            if error == nil {
+                upload(id: id, attempt: attempt) // online
+            } else {
+                checkConnection(id: id, attempt: attempt + 1, delay: backoff(attempt))
+            }
+        } else if status == 401, authRetries < 2 {
+            // Token rejected: force a refresh and resend now.
+            upload(id: id, attempt: attempt, authRetries: authRetries + 1)
+        } else if let status = status, error == nil, status < 500, status != 408, status != 429 {
+            // Final answer from the server (2xx, or 4xx the JS side decides about,
+            // including 401 when the user must sign in again).
+            finish(id: id, status: status)
+        } else {
+            // Network failure, 5xx or throttling: back off 15 min, 30 min, ... up to 6 h,
+            // then check the connection and fetch a token again.
+            checkConnection(id: id, attempt: attempt + 1, delay: backoff(attempt))
         }
     }
 
@@ -119,6 +134,19 @@ final class BackgroundUploader: NSObject, URLSessionDataDelegate {
         work.notify(queue: .main) {
             self.backgroundCompletionHandler?()
             self.backgroundCompletionHandler = nil
+        }
+    }
+
+    private func backoff(_ attempt: Int) -> TimeInterval {
+        min(15 * 60 * pow(2, Double(attempt)), 6 * 3600)
+    }
+
+    /// The JS side may already have re-queued this record on launch; don't send it twice.
+    private func restartIfNotQueued(id: String) {
+        work.enter()
+        session.getAllTasks { tasks in
+            if !Self.isQueued(id, in: tasks) { self.checkConnection(id: id, attempt: 0) }
+            self.work.leave()
         }
     }
 
@@ -147,12 +175,15 @@ final class BackgroundUploader: NSObject, URLSessionDataDelegate {
         }
     }
 
-    private func record(id: String, status: Int) {
+    /// Final outcome: remember it for JS and drop the queued copy.
+    private func finish(id: String, status: Int) {
         stateQueue.sync {
             var results = loadResults()
             results[id] = Result(status: status, at: Date().timeIntervalSince1970 * 1000)
             saveResults(results)
         }
+        try? FileManager.default.removeItem(at: bodyURL(id))
+        try? FileManager.default.removeItem(at: requestURL(id))
     }
 
     private func loadResults() -> [String: Result] {
@@ -172,10 +203,32 @@ final class BackgroundUploader: NSObject, URLSessionDataDelegate {
         dir.appendingPathComponent("\(id).json")
     }
 
-    /// taskDescription is "id|attempt|authRetries".
-    private static func parse(_ description: String?) -> (id: String?, attempt: Int, authRetries: Int) {
+    /// URL and headers of the record's POST, so it can be rebuilt after a relaunch.
+    private func requestURL(_ id: String) -> URL {
+        dir.appendingPathComponent("\(id).request.json")
+    }
+
+    private func savedRequest(_ id: String) -> URLRequest? {
+        guard let data = try? Data(contentsOf: requestURL(id)),
+              let saved = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any],
+              let url = URL(string: saved["url"] as? String ?? "")
+        else { return nil }
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        for (name, value) in saved["headers"] as? [String: String] ?? [:] {
+            request.setValue(value, forHTTPHeaderField: name)
+        }
+        return request
+    }
+
+    private static func isQueued(_ id: String, in tasks: [URLSessionTask]) -> Bool {
+        tasks.contains { $0.state != .completed && parse($0.taskDescription).id == id }
+    }
+
+    /// taskDescription is "id|attempt|authRetries", plus "|check" for connection checks.
+    private static func parse(_ description: String?) -> (id: String?, attempt: Int, authRetries: Int, isCheck: Bool) {
         let parts = (description ?? "").split(separator: "|")
-        guard parts.count == 3 else { return (nil, 0, 0) }
-        return (String(parts[0]), Int(parts[1]) ?? 0, Int(parts[2]) ?? 0)
+        guard parts.count == 3 || parts.count == 4 else { return (nil, 0, 0, false) }
+        return (String(parts[0]), Int(parts[1]) ?? 0, Int(parts[2]) ?? 0, parts.count == 4)
     }
 }

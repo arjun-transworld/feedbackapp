@@ -18,8 +18,13 @@ import java.util.Iterator;
 
 /**
  * Sends one queued record. Runs on a WorkManager background thread, with the
- * app open or not. Every attempt carries the signed-in user's MSAL access token
- * (see TokenProvider); a 401 triggers a silent refresh and an immediate resend.
+ * app open or not, and only once the device is online (network constraint).
+ *
+ * A record is never sent without the signed-in user's access token. The token is
+ * fetched right before sending; MSAL renews an expired one silently with the refresh
+ * token, in the background. A 401 triggers a forced refresh and an immediate resend.
+ * If no token can be had, nothing is sent and the record waits for crew to sign in
+ * again (reported to JS as 401, "crew sign-in needed").
  */
 public class UploadWorker extends Worker {
 
@@ -39,9 +44,13 @@ public class UploadWorker extends Worker {
 
         try {
             byte[] body = UploadQueue.read(bodyFile).getBytes(StandardCharsets.UTF_8);
-            int status = post(url, headers, body, TokenProvider.token(c, false));
+            String token = TokenProvider.token(c, false);
+            if (token == null) return noToken(c, id, bodyFile);
+            int status = post(url, headers, body, token);
             for (int i = 0; status == 401 && i < 2; i++) {
-                status = post(url, headers, body, TokenProvider.token(c, true));
+                token = TokenProvider.token(c, true);
+                if (token == null) return noToken(c, id, bodyFile);
+                status = post(url, headers, body, token);
             }
 
             if (status >= 500 || status == 408 || status == 429) {
@@ -55,6 +64,14 @@ public class UploadWorker extends Worker {
         } catch (IOException e) {
             return Result.retry(); // no connection / timeout
         }
+    }
+
+    /** No token: don't send. Retry twice (a brief network/MSAL hiccup), then wait for crew to sign in. */
+    private Result noToken(Context c, String id, File bodyFile) {
+        if (getRunAttemptCount() < 2) return Result.retry();
+        UploadQueue.record(c, id, 401);
+        bodyFile.delete();
+        return Result.success();
     }
 
     private static int post(String url, String headersJson, byte[] body, String token) throws IOException {
@@ -74,7 +91,7 @@ public class UploadWorker extends Worker {
             } catch (Exception ignored) {
                 conn.setRequestProperty("Content-Type", "application/json");
             }
-            if (token != null) conn.setRequestProperty("Authorization", "Bearer " + token);
+            conn.setRequestProperty("Authorization", "Bearer " + token);
             try (OutputStream out = conn.getOutputStream()) {
                 out.write(body);
             }

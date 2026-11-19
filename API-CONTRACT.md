@@ -56,6 +56,7 @@ Authorization: Bearer <Entra access token of the signed-in crew member>
 |---|---|
 | **2xx** (200 or 201) | Done. Record marked *sent*, and it's deleted from the device after 7 days. The response body is ignored |
 | **401** | Gets a fresh token silently and resends straight away (up to 2 times). Still 401 after that → the record stays on the device and the status shows "crew sign-in needed" |
+| *(no token on the device)* | The app **never sends a request without a token**. If it can't get one silently, the record stays on the device and the status shows "crew sign-in needed". So a request without `Authorization` should not reach the backend from this app |
 | **403** | Record stays on the device; the status shows "crew sign-in needed" |
 | **400 / 404 / 409 / 422** (other 4xx) | Record marked *rejected* on the device. Not retried on a timer, but **resent with the next submission** (or when crew tap *Retry rejected*). A record the server keeps refusing is resent each time |
 | **408, 429, 5xx, timeout, no network** | Resent automatically: 15 min, 30 min, 1 h … up to every 6 h |
@@ -70,10 +71,13 @@ Authorization: Bearer <Entra access token of the signed-in crew member>
    An expired token **must** return **401**, not 403 or 500. That's what makes the app refresh it.
 4. **Don't return 4xx for temporary problems.** Database down, overloaded and similar should be
    **5xx** or **429** so the device tries again. Any other 4xx is treated as permanent.
-5. **CORS isn't needed for the iOS/Android apps.** They send through native code, not the browser.
+5. **Network allowlists:** before each upload, the iOS app checks the connection by fetching
+   `https://login.microsoftonline.com/<tenant-id>/v2.0/.well-known/openid-configuration` (public, no data sent).
+   Corporate networks or Wi-Fi used by crew must allow `login.microsoftonline.com`, which sign-in needs anyway.
+6. **CORS isn't needed for the iOS/Android apps.** They send through native code, not the browser.
    It's only needed if the form is also opened in a web browser: then allow that site's origin
    with headers `Authorization, Content-Type` (including the `OPTIONS` preflight).
-6. **Respond within 60 seconds.**
+7. **Respond within 60 seconds.**
 
 ### Quick check with curl
 

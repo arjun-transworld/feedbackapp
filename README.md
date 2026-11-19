@@ -38,12 +38,16 @@ What the backend must provide is in [API-CONTRACT.md](API-CONTRACT.md).
   days for a connection. So the token is **not** taken from JS when the form is saved. Instead,
   sign-in and the background uploader share one MSAL setup (`TokenProvider`, using Microsoft's MSAL
   library directly, with no third-party sign-in plugin) and its keychain cache:
-  * When a request is queued, it attaches a cached token if one is still valid. Offline, it
-    may have none.
-  * If the server answers **401**, iOS relaunches the app in the background. MSAL then
-    silently gets a new token with the refresh token (network is available at that point)
-    and the request is resent immediately.
-  * Retries after a server error get a fresh token too.
+  * **A request is never sent without a token.** The token is fetched at the moment of sending,
+    not when the form is saved.
+  * **Renewal in the background.** On iOS, each attempt starts with a *connection check*: a
+    background download of Microsoft's public sign-in metadata for the tenant (no feedback, no
+    token). It finishes once the device is online, and iOS relaunches the app in the background.
+    MSAL then renews an expired token silently with the refresh token, and only then is the record
+    uploaded with it. On Android, the WorkManager job runs once online and does the same.
+  * **No token available** (refresh token expired or revoked, policy blocks silent renewal):
+    nothing is sent. The record stays on the device and the status bar shows "crew sign-in needed".
+  * If the server still answers **401**, the token is force-refreshed and the record resent (up to 2 times).
   The refresh token is what keeps this working while the app is closed. It lasts about 90 days
   and renews whenever it's used.
 * **Idempotent.** Each record has a client UUID, and the server ignores duplicates. Retries are always safe.
