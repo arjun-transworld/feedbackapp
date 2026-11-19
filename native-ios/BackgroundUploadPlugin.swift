@@ -29,7 +29,7 @@ public class BackgroundUploadPlugin: CAPPlugin, CAPBridgedPlugin {
         DispatchQueue.main.async {
             guard let viewController = self.bridge?.viewController else { return call.reject("App is not ready") }
             TokenProvider.signIn(from: viewController) { result, error in
-                guard let result = result else { return call.reject(Self.describe(error)) }
+                guard let result = result else { return call.reject(BackgroundUploadPlugin.describe(error)) }
                 call.resolve(["idToken": result.idToken ?? "", "username": result.account.username ?? ""])
             }
         }
