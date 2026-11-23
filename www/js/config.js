@@ -19,7 +19,7 @@
 
 const ENVIRONMENTS = {
   dev: {
-    feedbackUrl: "https://test-coral-tau-34.vercel.app/test",
+    feedbackUrl: "https://transworld-jets-backend.vercel.app/test",
     entra: {
       clientId: "76ae1d97-467c-42c2-86d2-9ccea3131137",
       tenantId: "d802aa12-690f-4281-9076-804109081af3",
@@ -28,7 +28,7 @@ const ENVIRONMENTS = {
     },
   },
   prod: {
-    feedbackUrl: "https://test-coral-tau-34.vercel.app/test",
+    feedbackUrl: "https://transworld-jets-backend.vercel.app/test",
     entra: {
       clientId: "76ae1d97-467c-42c2-86d2-9ccea3131137",
       tenantId: "d802aa12-690f-4281-9076-804109081af3",

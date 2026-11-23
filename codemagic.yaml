@@ -84,4 +84,6 @@ workflows:
         api_key: $APP_STORE_CONNECT_PRIVATE_KEY
         key_id: $APP_STORE_CONNECT_KEY_IDENTIFIER
         issuer_id: $APP_STORE_CONNECT_ISSUER_ID
-        submit_to_testflight: true
+        # Upload only: the build appears in TestFlight for internal testers (no Apple review needed).
+        # Set to true for external testers, after filling in TestFlight → Test Information in App Store Connect.
+        submit_to_testflight: false
