@@ -44,38 +44,59 @@ button, input, textarea { font: inherit; }
 .muted { color: var(--muted); margin: 0; }
 .queue-list { margin: 0; padding-left: 18px; font-size: 13px; color: var(--muted); }
 
-main { padding: 16px; max-width: 720px; margin: 0 auto; }
-.card { background: #fff; border: 1px solid var(--line); border-top: 6px solid var(--navy); border-radius: 10px; padding: 24px 20px; }
-.brand { display: block; width: 150px; height: auto; margin: -6px auto 14px; }
+/* ---- Feedback form: compact so it needs little scrolling on a phone and fits a tablet screen.
+   Touch targets stay at least 40px high. */
+main { padding: 12px; max-width: 720px; margin: 0 auto; }
+.card { background: #fff; border: 1px solid var(--line); border-top: 6px solid var(--navy); border-radius: 10px; padding: 16px; }
+
+.form-head { text-align: center; }
+.brand { display: block; width: 120px; height: auto; margin: -4px auto 6px; }
 .thanks .brand { width: 180px; margin: 0 auto 24px; }
-.eyebrow { letter-spacing: .2em; text-transform: uppercase; color: var(--accent); font-size: 12px; margin: 0 0 6px; }
-h1 { font-weight: normal; color: var(--navy); font-size: 26px; margin: 0 0 18px; letter-spacing: .04em; text-transform: uppercase; }
-h2 { font-weight: normal; font-size: 14px; letter-spacing: .15em; text-transform: uppercase; color: var(--muted); margin: 24px 0 8px; }
+.eyebrow { letter-spacing: .2em; text-transform: uppercase; color: var(--accent); font-size: 11px; margin: 0 0 2px; }
+h1 { font-weight: normal; color: var(--navy); font-size: 21px; margin: 0 0 12px; letter-spacing: .04em; text-transform: uppercase; }
+h2 { font-weight: normal; font-size: 12px; letter-spacing: .15em; text-transform: uppercase; color: var(--muted); margin: 16px 0 6px; }
+h2 em { font-style: normal; letter-spacing: .05em; text-transform: none; }
 
-.meta { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); padding: 12px 0; }
-.meta span { display: block; font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
-.meta strong { font-weight: normal; }
-.hint { font-size: 12px; color: var(--muted); font-style: italic; }
+.meta { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); padding: 8px 0; }
+.meta span { display: block; font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+.meta strong { font-weight: normal; font-size: 15px; }
 
-.field { display: grid; gap: 6px; margin-top: 16px; font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
-.field input, .field textarea { padding: 10px; border: 1px solid var(--line); border-radius: 6px; color: var(--ink); text-transform: none; letter-spacing: normal; font-size: 16px; }
+/* Phone: name full width, email and phone side by side. Wider screens: all three in one row. */
+.details { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.details .wide { grid-column: 1 / -1; }
+.field { display: grid; gap: 4px; font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+.field input, .field textarea { width: 100%; min-height: 40px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 6px; color: var(--ink); text-transform: none; letter-spacing: normal; font-size: 16px; }
+.field textarea { resize: vertical; }
+.comments { margin-top: 14px; }
 
-.rating { border: 0; padding: 12px 0; margin: 0; border-bottom: 1px solid var(--line); }
-.rating legend { padding: 0; margin-bottom: 8px; }
+.rating { border: 0; padding: 8px 0; margin: 0; border-bottom: 1px solid var(--line); min-width: 0; }
+.rating legend { padding: 0; margin-bottom: 6px; font-size: 15px; }
 .scale { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
 .scale label, .choice label { position: relative; }
 .scale input, .choice input { position: absolute; opacity: 0; }
 .scale span, .choice span {
-  display: block; text-align: center; padding: 10px 2px; border: 1px solid var(--line); border-radius: 6px;
-  font: 13px -apple-system, system-ui, sans-serif; color: var(--muted);
+  display: flex; align-items: center; justify-content: center; min-height: 40px; padding: 4px 2px;
+  border: 1px solid var(--line); border-radius: 6px; font: 13px -apple-system, system-ui, sans-serif; color: var(--muted);
 }
 .scale input:checked + span, .choice input:checked + span { background: var(--navy); border-color: var(--navy); color: #fff; }
 .scale input:focus-visible + span, .choice input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
 
-.choice { border: 0; padding: 0; margin: 20px 0 0; display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
-.choice legend { margin-bottom: 8px; }
+.choice { border: 0; padding: 0; margin: 14px 0 0; min-width: 0; }
+.choice legend { padding: 0; margin-bottom: 6px; font-size: 15px; }
+.yes-no { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
 
-.error { color: var(--error); font-size: 14px; }
-.submit { width: 100%; margin-top: 20px; padding: 14px; border: 0; border-radius: 6px; background: var(--navy); color: #fff; font-size: 17px; letter-spacing: .1em; text-transform: uppercase; }
-.footer { text-align: center; font-style: italic; color: var(--muted); font-size: 13px; margin: 18px 0 0; }
+.error { color: var(--error); font-size: 14px; margin: 10px 0 0; }
+.submit { width: 100%; margin-top: 14px; min-height: 48px; border: 0; border-radius: 6px; background: var(--navy); color: #fff; font-size: 16px; letter-spacing: .1em; text-transform: uppercase; }
+.footer { text-align: center; font-style: italic; color: var(--muted); font-size: 12px; margin: 10px 0 0; }
 .thanks { text-align: center; padding: 60px 20px; }
+
+/* Wider screens (large phones in landscape, tablets): each question on one line. */
+@media (min-width: 560px) {
+  .card { padding: 20px 24px; }
+  .details { grid-template-columns: 1fr 1fr 1fr; }
+  .details .wide { grid-column: auto; }
+  .rating { display: grid; grid-template-columns: 13rem 1fr; align-items: center; gap: 12px; }
+  .rating legend { float: left; margin: 0; } /* legend can't be a grid item; float lets it sit in the first column */
+  .choice { display: grid; grid-template-columns: 13rem 1fr; align-items: center; gap: 12px; }
+  .choice legend { float: left; margin: 0; }
+}

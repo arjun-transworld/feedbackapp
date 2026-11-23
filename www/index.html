@@ -41,28 +41,36 @@
 
   <main>
     <form id="feedback-form" class="card" novalidate>
-      <img class="brand" src="img/transworld-jets-logo.png" alt="Transworld Jets">
-      <p class="eyebrow">The Private Skies Experience</p>
-      <h1>Two minutes of your time</h1>
+      <header class="form-head">
+        <img class="brand" src="img/transworld-jets-logo.png" alt="Transworld Jets">
+        <p class="eyebrow">The Private Skies Experience</p>
+        <h1>Two minutes of your time</h1>
+      </header>
 
-      <div class="meta">
+      <div class="meta" title="Pre-filled by your cabin crew">
         <div><span>Date &amp; route</span><strong id="show-route">—</strong></div>
         <div><span>Aircraft / tail no.</span><strong id="show-tail">—</strong></div>
       </div>
-      <p class="hint">Date, route &amp; aircraft pre-filled by your cabin crew</p>
 
-      <label class="field">Name (optional)<input name="name" autocomplete="off"></label>
+      <h2>Your details <em>(optional)</em></h2>
+      <div class="details">
+        <label class="field wide">Name<input name="name" autocomplete="off"></label>
+        <label class="field">Email<input name="email" type="email" inputmode="email" autocomplete="off" autocapitalize="off" spellcheck="false"></label>
+        <label class="field">Phone<input name="phone" type="tel" inputmode="tel" autocomplete="off"></label>
+      </div>
 
       <h2>Rate your experience</h2>
       <div class="ratings" id="ratings"></div>
 
       <fieldset class="choice">
-        <legend>Would you choose us again for your next journey?</legend>
-        <label><input type="radio" name="chooseAgain" value="yes"><span>Yes</span></label>
-        <label><input type="radio" name="chooseAgain" value="no"><span>No</span></label>
+        <legend>Would you choose us again?</legend>
+        <div class="yes-no">
+          <label><input type="radio" name="chooseAgain" value="yes"><span>Yes</span></label>
+          <label><input type="radio" name="chooseAgain" value="no"><span>No</span></label>
+        </div>
       </fieldset>
 
-      <label class="field">Anything we should know<textarea name="comments" rows="4"></textarea></label>
+      <label class="field comments">Anything we should know<textarea name="comments" rows="3"></textarea></label>
 
       <p id="form-error" class="error" hidden></p>
       <button type="submit" class="submit">Submit</button>

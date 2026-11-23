@@ -27,6 +27,8 @@ Authorization: Bearer <Entra access token of the signed-in crew member>
   "route": "02 Nov 2026 · DXB → LTN",
   "tail": "G7500 · A6-TWJ",
   "name": "Jane Smith",
+  "email": "jane.smith@example.com",
+  "phone": "+44 7700 900123",
   "ratings": {
     "crew": "exceptional",
     "comfort": "good",
@@ -45,6 +47,8 @@ Authorization: Bearer <Entra access token of the signed-in crew member>
 | `createdAt` | ISO-8601 UTC | When the passenger submitted. Can be days before the request arrives |
 | `route`, `tail` | string \| null | Entered by crew |
 | `name` | string \| null | Optional |
+| `email` | string \| null | Optional. Checked on the device only for a basic `x@y.z` shape |
+| `phone` | string \| null | Optional. As typed (digits, spaces, `+ ( ) . -`, 6–20 characters); not normalised |
 | `ratings.crew`, `.comfort`, `.catering`, `.overall` | `"poor"` \| `"fair"` \| `"good"` \| `"exceptional"` \| null | Unanswered = null |
 | `chooseAgain` | boolean \| null | |
 | `comments` | string \| null | Free text |
@@ -82,7 +86,7 @@ Authorization: Bearer <Entra access token of the signed-in crew member>
 ### Quick check with curl
 
 ```bash
-curl -i -X POST "$API/feedback" -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" -d '{"id":"6f1c2a9e-3b4d-4c55-9a77-0e8b2f1d4c3a","createdAt":"2026-11-02T07:18:13Z","route":"TEST","tail":null,"name":null,"ratings":{"crew":"good","comfort":null,"catering":null,"overall":"good"},"chooseAgain":true,"comments":null,"crew":null}'
+curl -i -X POST "$API/feedback" -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" -d '{"id":"6f1c2a9e-3b4d-4c55-9a77-0e8b2f1d4c3a","createdAt":"2026-11-02T07:18:13Z","route":"TEST","tail":null,"name":null,"email":null,"phone":null,"ratings":{"crew":"good","comfort":null,"catering":null,"overall":"good"},"chooseAgain":true,"comments":null,"crew":null}'
 ```
 
 Expect `200`/`201` the first time and `200` when the same command is run again.

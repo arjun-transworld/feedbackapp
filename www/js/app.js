@@ -39,9 +39,16 @@ form.addEventListener("submit", async (e) => {
   const ratings = Object.fromEntries(CATEGORIES.map(([k]) => [k, data.get(k)]));
   const chooseAgain = data.get("chooseAgain");
   const comments = (data.get("comments") || "").trim();
+  const email = (data.get("email") || "").trim();
+  const phone = (data.get("phone") || "").trim();
 
-  if (!Object.values(ratings).some(Boolean) && !chooseAgain && !comments) {
-    $("form-error").textContent = "Please rate at least one item or leave a comment.";
+  const problem =
+    !Object.values(ratings).some(Boolean) && !chooseAgain && !comments ? "Please rate at least one item or leave a comment."
+    : email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? "Please check the email address."
+    : phone && !/^\+?[\d\s().-]{6,20}$/.test(phone) ? "Please check the phone number."
+    : null;
+  if (problem) {
+    $("form-error").textContent = problem;
     $("form-error").hidden = false;
     return;
   }
@@ -52,6 +59,8 @@ form.addEventListener("submit", async (e) => {
     route: flight.route || null,
     tail: flight.tail || null,
     name: (data.get("name") || "").trim() || null,
+    email: email || null,
+    phone: phone || null,
     ratings,
     chooseAgain: chooseAgain === null ? null : chooseAgain === "yes",
     comments: comments || null,
