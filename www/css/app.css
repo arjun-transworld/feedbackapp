@@ -29,6 +29,7 @@ button, input, textarea { font: inherit; }
 .sync.pending::before { color: #f2c14e; }
 .sync.problem::before { color: #e06c5a; }
 .link { background: none; border: 0; color: #fff; text-decoration: underline; padding: 4px; }
+.crew-actions { display: flex; gap: 12px; flex-shrink: 0; }
 
 .crew-panel {
   padding: 16px; background: var(--navy-soft); border-bottom: 1px solid var(--line);
@@ -45,6 +46,8 @@ button, input, textarea { font: inherit; }
 
 main { padding: 16px; max-width: 720px; margin: 0 auto; }
 .card { background: #fff; border: 1px solid var(--line); border-top: 6px solid var(--navy); border-radius: 10px; padding: 24px 20px; }
+.brand { display: block; width: 150px; height: auto; margin: -6px auto 14px; }
+.thanks .brand { width: 180px; margin: 0 auto 24px; }
 .eyebrow { letter-spacing: .2em; text-transform: uppercase; color: var(--accent); font-size: 12px; margin: 0 0 6px; }
 h1 { font-weight: normal; color: var(--navy); font-size: 26px; margin: 0 0 18px; letter-spacing: .04em; text-transform: uppercase; }
 h2 { font-weight: normal; font-size: 14px; letter-spacing: .15em; text-transform: uppercase; color: var(--muted); margin: 24px 0 8px; }

@@ -2,6 +2,7 @@
 # on a cloud Mac (codemagic.yaml) without opening Xcode. Safe to run more than once.
 # Run after `npx cap add ios` / `npx cap sync ios`:  ruby tools/ios-setup.rb
 require 'fileutils'
+require 'json'
 require 'xcodeproj'
 
 root = File.expand_path('..', __dir__)
@@ -67,6 +68,16 @@ plist['CFBundleDisplayName'] = 'Private Skies Feedback'
 plist['ITSAppUsesNonExemptEncryption'] = false
 Xcodeproj::Plist.write_to_path(plist, plist_path)
 
+# App icon: resources/ios/AppIcon-1024.png (1024x1024, no transparency) replaces the Capacitor default.
+icon_set = File.join(app_dir, 'Assets.xcassets/AppIcon.appiconset')
+FileUtils.mkdir_p(icon_set)
+FileUtils.cp(File.join(root, 'resources/ios/AppIcon-1024.png'), File.join(icon_set, 'AppIcon-1024.png'))
+File.write(File.join(icon_set, 'Contents.json'), JSON.pretty_generate(
+  'images' => [{ 'filename' => 'AppIcon-1024.png', 'idiom' => 'universal', 'platform' => 'ios', 'size' => '1024x1024' }],
+  'info' => { 'author' => 'xcode', 'version' => 1 }
+))
+Dir.glob(File.join(icon_set, '*.png')).each { |f| File.delete(f) unless File.basename(f) == 'AppIcon-1024.png' }
+
 # Microsoft's MSAL library, used by TokenProvider.swift for sign-in and background tokens.
 # `npx cap sync` only rewrites the capacitor_pods block, so this line survives later syncs.
 podfile = File.join(root, 'ios/App/Podfile')
@@ -78,4 +89,4 @@ unless pods.include?("pod 'MSAL'")
 end
 system('pod install', chdir: File.join(root, 'ios/App')) or abort 'pod install failed'
 
-puts 'iOS project set up: native files, MainViewController, Keychain Sharing, Info.plist, version, MSAL.'
+puts 'iOS project set up: native files, MainViewController, entitlements, Info.plist, version, app icon, MSAL.'

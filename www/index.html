@@ -15,10 +15,15 @@
         'in the FeedbackApp folder, then open <a style="color:#9cc3ff" href="http://localhost:8080">http://localhost:8080</a>.</div>');
     }
   </script>
-  <!-- Crew bar: sync status + flight setup. Passengers only see the form below. -->
-  <header class="crew-bar">
+  <!-- Crew bar: sync status + flight setup. Shown for 10 s when the app opens, then hidden from
+       passengers; crew swipe down with two fingers to show it again (Ctrl+Alt+C in a desktop
+       browser). It hides itself after 2 minutes without crew activity. -->
+  <header id="crew-bar" class="crew-bar" hidden>
     <span id="sync-status" class="sync">Starting…</span>
-    <button id="crew-toggle" class="link" type="button">Crew</button>
+    <span class="crew-actions">
+      <button id="crew-toggle" class="link" type="button">Crew</button>
+      <button id="crew-hide" class="link" type="button">Hide</button>
+    </span>
   </header>
 
   <section id="crew-panel" class="crew-panel" hidden>
@@ -36,6 +41,7 @@
 
   <main>
     <form id="feedback-form" class="card" novalidate>
+      <img class="brand" src="img/transworld-jets-logo.png" alt="Transworld Jets">
       <p class="eyebrow">The Private Skies Experience</p>
       <h1>Two minutes of your time</h1>
 
@@ -64,6 +70,7 @@
     </form>
 
     <div id="thanks" class="card thanks" hidden>
+      <img class="brand" src="img/transworld-jets-logo.png" alt="Transworld Jets">
       <h1>Thank you</h1>
       <p>Your feedback has been saved.</p>
     </div>

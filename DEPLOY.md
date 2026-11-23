@@ -190,7 +190,8 @@ Right-click **Info.plist** → **Open As → Source Code**. Paste the following 
 ### 4f. Version and display name
 
 On the **General** tab, set **Display Name** to `Private Skies Feedback`, **Version** to `1.0.0` and **Build** to `1`.
-Add an app icon under **Assets → AppIcon**: one 1024×1024 PNG is enough.
+App icon: drag `resources/ios/AppIcon-1024.png` onto **Assets → AppIcon** (one 1024×1024 PNG, no transparency).
+`tools/ios-setup.rb` does this automatically.
 
 ✅ **Check:** **Product → Build** (⌘B) shows "Build Succeeded". If it fails, see [Troubleshooting](#troubleshooting).
 

@@ -65,6 +65,57 @@ form.addEventListener("submit", async (e) => {
   setTimeout(() => { $("thanks").hidden = true; form.hidden = false; window.scrollTo(0, 0); }, 4000);
 });
 
+// ---- Crew mode --------------------------------------------------------------
+// The crew bar and panel are hidden from passengers. Crew swipe down with two fingers to
+// show them (again to hide), or use Ctrl+Alt+C in a desktop browser. They hide themselves
+// after 2 minutes without crew activity, so the device can be handed back safely.
+// When the app is opened (or brought back to the front) the bar shows for 10 seconds, so
+// crew see any warnings; touching it keeps it open as usual.
+
+const CREW_IDLE_MS = 2 * 60 * 1000;
+const CREW_PEEK_MS = 10 * 1000;
+const SWIPE_DOWN_PX = 80;
+let crewTimer;
+
+function setCrewMode(on, hideAfterMs = CREW_IDLE_MS) {
+  $("crew-bar").hidden = !on;
+  if (!on) $("crew-panel").hidden = true;
+  clearTimeout(crewTimer);
+  if (on) crewTimer = setTimeout(() => setCrewMode(false), hideAfterMs);
+}
+
+setCrewMode(true, CREW_PEEK_MS);
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible" && !crewModeOn()) setCrewMode(true, CREW_PEEK_MS);
+});
+const crewModeOn = () => !$("crew-bar").hidden;
+
+const avgY = (touches) => (touches[0].clientY + touches[1].clientY) / 2;
+let swipeStartY = null;
+document.addEventListener("touchstart", (e) => {
+  swipeStartY = e.touches.length === 2 ? avgY(e.touches) : null;
+}, { passive: true });
+document.addEventListener("touchmove", (e) => {
+  if (swipeStartY === null || e.touches.length !== 2) return;
+  e.preventDefault(); // no scrolling or zooming during the gesture
+  if (avgY(e.touches) - swipeStartY > SWIPE_DOWN_PX) {
+    swipeStartY = null; // once per gesture
+    setCrewMode(!crewModeOn());
+  }
+}, { passive: false });
+document.addEventListener("touchend", () => { swipeStartY = null; });
+
+document.addEventListener("keydown", (e) => {
+  if (e.ctrlKey && e.altKey && e.key.toLowerCase() === "c") setCrewMode(!crewModeOn());
+});
+
+// Any crew activity keeps crew mode open.
+for (const id of ["crew-bar", "crew-panel"]) {
+  for (const type of ["click", "input"]) $(id).addEventListener(type, () => crewModeOn() && setCrewMode(true));
+}
+
+$("crew-hide").addEventListener("click", (e) => { e.stopPropagation(); setCrewMode(false); });
+
 // ---- Crew panel -------------------------------------------------------------
 
 $("crew-toggle").addEventListener("click", () => { $("crew-panel").hidden = !$("crew-panel").hidden; });
