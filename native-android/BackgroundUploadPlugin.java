@@ -13,7 +13,7 @@ import org.json.JSONObject;
  * JS bridge: window.Capacitor.Plugins.BackgroundUpload — same API as the iOS plugin.
  *   signIn({ clientId, tenantId, scope, keyHash }) -> { idToken, username }: Microsoft sign-in (crew)
  *   enqueue({ id, url, headers, body, auth: { clientId, tenantId, scope, keyHash } })
- *   getState()          -> { results: [{id, status, at}], active: [id] }
+ *   getState()          -> { results: [{id, status, at, detail?}], active: [id] }
  *   clearResults({ ids })
  */
 @CapacitorPlugin(name = "BackgroundUpload")
@@ -76,6 +76,7 @@ public class BackgroundUploadPlugin extends Plugin {
                 item.put("id", id);
                 item.put("status", r.getInt("status"));
                 item.put("at", r.getLong("at"));
+                if (r.has("detail")) item.put("detail", r.getString("detail"));
                 results.put(item);
             }
             JSArray active = new JSArray();

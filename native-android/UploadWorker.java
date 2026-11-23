@@ -44,13 +44,14 @@ public class UploadWorker extends Worker {
 
         try {
             byte[] body = UploadQueue.read(bodyFile).getBytes(StandardCharsets.UTF_8);
-            String token = TokenProvider.token(c, false);
-            if (token == null) return noToken(c, id, bodyFile);
-            int status = post(url, headers, body, token);
-            for (int i = 0; status == 401 && i < 2; i++) {
+            TokenProvider.TokenResult token = TokenProvider.token(c, false);
+            if (token.token == null) return noToken(c, id, bodyFile, token.failure);
+            int status = post(url, headers, body, token.token);
+            int tries = 1;
+            for (; status == 401 && tries < 3; tries++) {
                 token = TokenProvider.token(c, true);
-                if (token == null) return noToken(c, id, bodyFile);
-                status = post(url, headers, body, token);
+                if (token.token == null) return noToken(c, id, bodyFile, token.failure);
+                status = post(url, headers, body, token.token);
             }
 
             if (status >= 500 || status == 408 || status == 429) {
@@ -58,7 +59,7 @@ public class UploadWorker extends Worker {
             }
             // Final answer (2xx success, or 4xx the JS side decides about, including
             // 401 when the user must sign in again).
-            UploadQueue.record(c, id, status);
+            UploadQueue.record(c, id, status, status == 401 ? "server answered 401 to a fresh token (" + tries + " tries)" : null);
             bodyFile.delete();
             return Result.success();
         } catch (IOException e) {
@@ -67,9 +68,9 @@ public class UploadWorker extends Worker {
     }
 
     /** No token: don't send. Retry twice (a brief network/MSAL hiccup), then wait for crew to sign in. */
-    private Result noToken(Context c, String id, File bodyFile) {
+    private Result noToken(Context c, String id, File bodyFile, String failure) {
         if (getRunAttemptCount() < 2) return Result.retry();
-        UploadQueue.record(c, id, 401);
+        UploadQueue.record(c, id, 401, "not sent, no token: " + failure);
         bodyFile.delete();
         return Result.success();
     }

@@ -53,14 +53,33 @@ enum TokenProvider {
         ctx.app.acquireToken(with: params, completionBlock: completion)
     }
 
-    /// Calls back with a token, or nil (not signed in, refresh token expired, or offline with an expired token).
-    static func token(forceRefresh: Bool = false, completion: @escaping (String?) -> Void) {
-        guard let ctx = makeApp(), let account = (try? ctx.app.allAccounts())?.first else { return completion(nil) }
+    /// Calls back with a token, or nil and the reason (shown to crew in the queue list): not signed in,
+    /// refresh token expired or revoked, a sign-in policy requiring interaction, or keychain locked.
+    static func token(forceRefresh: Bool = false, completion: @escaping (_ token: String?, _ failure: String?) -> Void) {
+        guard let ctx = makeApp() else { return completion(nil, "Entra settings missing on this device") }
+        let accounts: [MSALAccount]
+        do { accounts = try ctx.app.allAccounts() } catch { return completion(nil, describe(error)) }
+        guard let account = accounts.first else { return completion(nil, "no crew member signed in on this device") }
 
         let params = MSALSilentTokenParameters(scopes: [ctx.scope], account: account)
         params.forceRefresh = forceRefresh
-        ctx.app.acquireTokenSilent(with: params) { result, _ in
-            completion(result?.accessToken)
+        ctx.app.acquireTokenSilent(with: params) { result, error in
+            if let token = result?.accessToken { completion(token, nil) } else { completion(nil, describe(error)) }
         }
+    }
+
+    /// MSAL's localizedDescription is only "MSALErrorDomain error -50000"; the reason is in userInfo
+    /// (e.g. "AADSTS53000: Device is not in required device state" for a Conditional Access block).
+    static func describe(_ error: Error?) -> String {
+        guard let error = error as NSError? else { return "unknown MSAL error" }
+        var text = (error.userInfo[MSALErrorDescriptionKey] as? String ?? error.localizedDescription)
+            .components(separatedBy: "\n").first ?? ""
+        var codes = "\(error.domain) \(error.code)"
+        if let internalCode = error.userInfo[MSALInternalErrorCodeKey] { codes += ", internal \(internalCode)" }
+        if let underlying = error.userInfo[NSUnderlyingErrorKey] as? NSError {
+            codes += ", \(underlying.domain) \(underlying.code)"
+        }
+        if text.count > 160 { text = String(text.prefix(160)) + "…" }
+        return "\(text) (\(codes))"
     }
 }

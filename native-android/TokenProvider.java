@@ -80,13 +80,20 @@ final class TokenProvider {
         }).start();
     }
 
-    /** Blocking — call only from a background thread. Returns null if no token can be had silently. */
-    static String token(Context c, boolean forceRefresh) {
+    /** A token, or null and the reason (shown to crew in the queue list). */
+    static final class TokenResult {
+        final String token;
+        final String failure;
+        private TokenResult(String token, String failure) { this.token = token; this.failure = failure; }
+    }
+
+    /** Blocking — call only from a background thread. */
+    static TokenResult token(Context c, boolean forceRefresh) {
         try {
             IMultipleAccountPublicClientApplication app = createApp(c);
-            if (app == null) return null;
+            if (app == null) return new TokenResult(null, "Entra settings missing on this device");
             List<IAccount> accounts = app.getAccounts();
-            if (accounts.isEmpty()) return null;
+            if (accounts.isEmpty()) return new TokenResult(null, "no crew member signed in on this device");
             IAccount account = accounts.get(0);
 
             AcquireTokenSilentParameters params = new AcquireTokenSilentParameters.Builder()
@@ -95,9 +102,12 @@ final class TokenProvider {
                     .withScopes(Collections.singletonList(scope(c)))
                     .forceRefresh(forceRefresh)
                     .build();
-            return app.acquireTokenSilent(params).getAccessToken();
+            return new TokenResult(app.acquireTokenSilent(params).getAccessToken(), null);
         } catch (Exception e) {
-            return null; // not signed in, refresh token expired/revoked, or MSAL error
+            // Refresh token expired/revoked, a sign-in policy requiring interaction (e.g. AADSTS53000), or MSAL error.
+            String reason = e instanceof MsalException ? ((MsalException) e).getErrorCode() + ": " + e.getMessage() : String.valueOf(e);
+            if (reason.length() > 200) reason = reason.substring(0, 200) + "…";
+            return new TokenResult(null, reason);
         }
     }
 

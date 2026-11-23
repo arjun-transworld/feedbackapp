@@ -6,7 +6,7 @@ import MSAL
 ///   signIn({ clientId, tenantId, scope }) -> { idToken, username }: Microsoft sign-in sheet (crew)
 ///   enqueue({ id, url, headers, body, auth: { clientId, tenantId, scope } })
 ///                                        -> queue a POST; a user token is attached natively
-///   getState()                           -> { results: [{id, status, at}], active: [id] }
+///   getState()                           -> { results: [{id, status, at, detail?}], active: [id] }
 ///   clearResults({ ids })                -> forget results JS has already applied
 @objc(BackgroundUploadPlugin)
 public class BackgroundUploadPlugin: CAPPlugin, CAPBridgedPlugin {

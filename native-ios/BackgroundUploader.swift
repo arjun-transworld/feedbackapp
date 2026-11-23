@@ -74,7 +74,7 @@ final class BackgroundUploader: NSObject, URLSessionDataDelegate, URLSessionDown
     private func checkConnection(id: String, attempt: Int, delay: TimeInterval = 0) {
         guard let tenantId = TokenProvider.tenantId,
               let url = URL(string: "https://login.microsoftonline.com/\(tenantId)/v2.0/.well-known/openid-configuration")
-        else { return finish(id: id, status: Self.noTokenStatus) }
+        else { return finish(id: id, status: Self.noTokenStatus, detail: "not sent: Entra settings missing on this device") }
         let task = session.downloadTask(with: url)
         task.taskDescription = "\(id)|\(attempt)|0|check"
         if delay > 0 { task.earliestBeginDate = Date().addingTimeInterval(delay) }
@@ -85,9 +85,11 @@ final class BackgroundUploader: NSObject, URLSessionDataDelegate, URLSessionDown
     private func upload(id: String, attempt: Int, authRetries: Int = 0) {
         guard var request = savedRequest(id) else { return }
         work.enter()
-        TokenProvider.token(forceRefresh: authRetries > 0) { token in
+        TokenProvider.token(forceRefresh: authRetries > 0) { token, failure in
             defer { self.work.leave() }
-            guard let token = token else { return self.finish(id: id, status: Self.noTokenStatus) }
+            guard let token = token else {
+                return self.finish(id: id, status: Self.noTokenStatus, detail: "not sent, no token: \(failure ?? "unknown")")
+            }
             request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
             let task = self.session.uploadTask(with: request, fromFile: self.bodyURL(id))
             task.taskDescription = "\(id)|\(attempt)|\(authRetries)"
@@ -122,7 +124,8 @@ final class BackgroundUploader: NSObject, URLSessionDataDelegate, URLSessionDown
         } else if let status = status, error == nil, status < 500, status != 408, status != 429 {
             // Final answer from the server (2xx, or 4xx the JS side decides about,
             // including 401 when the user must sign in again).
-            finish(id: id, status: status)
+            let detail = status == 401 ? "server answered 401 to a fresh token (\(authRetries + 1) tries)" : nil
+            finish(id: id, status: status, detail: detail)
         } else {
             // Network failure, 5xx or throttling: back off 15 min, 30 min, ... up to 6 h,
             // then check the connection and fetch a token again.
@@ -155,14 +158,18 @@ final class BackgroundUploader: NSObject, URLSessionDataDelegate, URLSessionDown
     private struct Result: Codable {
         let status: Int
         let at: Double // ms since 1970, when the server answered
+        var detail: String? // why it ended this way, shown to crew (e.g. "not sent, no token: AADSTS53000 …")
     }
 
-    /// Finished records ([{id, status, at}]) and ids of transfers still queued in iOS.
+    /// Finished records ([{id, status, at, detail?}]) and ids of transfers still queued in iOS.
     func state(completion: @escaping ([[String: Any]], [String]) -> Void) {
         session.getAllTasks { tasks in
             let active = tasks.filter { $0.state != .completed }.compactMap { Self.parse($0.taskDescription).id }
-            let results = self.stateQueue.sync { self.loadResults() }
-                .map { ["id": $0.key, "status": $0.value.status, "at": $0.value.at] as [String: Any] }
+            let results = self.stateQueue.sync { self.loadResults() }.map { entry -> [String: Any] in
+                var item: [String: Any] = ["id": entry.key, "status": entry.value.status, "at": entry.value.at]
+                if let detail = entry.value.detail { item["detail"] = detail }
+                return item
+            }
             completion(results, active)
         }
     }
@@ -176,10 +183,10 @@ final class BackgroundUploader: NSObject, URLSessionDataDelegate, URLSessionDown
     }
 
     /// Final outcome: remember it for JS and drop the queued copy.
-    private func finish(id: String, status: Int) {
+    private func finish(id: String, status: Int, detail: String? = nil) {
         stateQueue.sync {
             var results = loadResults()
-            results[id] = Result(status: status, at: Date().timeIntervalSince1970 * 1000)
+            results[id] = Result(status: status, at: Date().timeIntervalSince1970 * 1000, detail: detail)
             saveResults(results)
         }
         try? FileManager.default.removeItem(at: bodyURL(id))

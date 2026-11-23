@@ -77,13 +77,16 @@ final class UploadQueue {
         return ids;
     }
 
-    // ---- Results store: { id: { status, at } }, read by JS via the plugin ----
+    // ---- Results store: { id: { status, at, detail? } }, read by JS via the plugin ----
 
-    static void record(Context c, String id, int status) {
+    /** detail: why it ended this way, shown to crew (e.g. "not sent, no token: …"); null for a plain server answer. */
+    static void record(Context c, String id, int status, String detail) {
         synchronized (lock) {
             try {
                 JSONObject results = loadResults(c);
-                results.put(id, new JSONObject().put("status", status).put("at", System.currentTimeMillis()));
+                JSONObject entry = new JSONObject().put("status", status).put("at", System.currentTimeMillis());
+                if (detail != null) entry.put("detail", detail);
+                results.put(id, entry);
                 write(resultsFile(c), results.toString());
             } catch (Exception ignored) {
                 // Worst case JS re-queues the record and the server ignores the duplicate.
