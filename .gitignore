@@ -1,1 +1,8 @@
 .env
+*.p8
+cert_key
+cert_key.pub
+*.p12
+*.mobileprovision
+*.jks
+*.keystore

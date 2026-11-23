@@ -73,7 +73,8 @@ What the backend must provide is in [API-CONTRACT.md](API-CONTRACT.md).
 | Entra clientId / tenantId / scope | [`www/js/config.js`](www/js/config.js): `entra` | Per environment. No client secret: a mobile app is a public client |
 | Android signature hash | [`www/js/config.js`](www/js/config.js): `entra.androidKeyHash` | From `tools\android-keyhash.ps1`. Debug and release differ |
 | What the backend must do | [API-CONTRACT.md](API-CONTRACT.md) | Out of scope for this app; hand to the backend team |
-| App ID / name | `capacitor.config.json` | `com.transworld.jets.feedback` is the iOS bundle ID and Android package name registered in Entra |
+| iOS bundle ID / name | `tools/ios-setup.rb` (`IOS_BUNDLE_ID`, `IOS_DISPLAY_NAME`) + `codemagic.yaml` | `com.transworld.jets.privateskies`, registered in Apple and in Entra (iOS platform). App Store name "Private Skies, Transworld Jets", SKU `tw-jets-app` |
+| Android package / name | `capacitor.config.json` | `com.transworld.jets.feedback`, registered in Entra (Android platform) |
 
 ## Previewing the screen on Windows
 

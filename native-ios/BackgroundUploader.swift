@@ -17,7 +17,7 @@ import Foundation
 /// A 401 from the server triggers a forced token refresh and an immediate resend (up to 2 times).
 final class BackgroundUploader: NSObject, URLSessionDataDelegate, URLSessionDownloadDelegate {
     static let shared = BackgroundUploader()
-    static let sessionId = "com.transworld.jets.feedback.upload"
+    static let sessionId = "com.transworld.jets.feedback.upload" // internal name only; not tied to the bundle ID
 
     /// Recorded when no token can be had; JS treats it like a 401 ("crew sign-in needed").
     private static let noTokenStatus = 401

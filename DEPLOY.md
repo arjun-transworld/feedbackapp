@@ -48,8 +48,8 @@ Use the **same app registration** your other Transworld apps use (the `CLIENT_ID
    * **Application (client) ID** → `clientId` in part 3
    * **Directory (tenant) ID** → `tenantId` in part 3
 3. Under **Authentication**, click **Add a platform** → **iOS / macOS**.
-   * Bundle ID: `com.transworld.jets.feedback`
-   * Click **Configure**. Entra shows the redirect URI `msauth.com.transworld.jets.feedback://auth`. Nothing else is needed.
+   * Bundle ID: `com.transworld.jets.privateskies`
+   * Click **Configure**. Entra shows the redirect URI `msauth.com.transworld.jets.privateskies://auth`. Nothing else is needed.
 4. Under **Expose an API**, copy the full scope, e.g. `api://<client-id>/access_as_user` → `scope` in part 3.
    (If the backend API has its **own** app registration, take the scope from that registration instead,
    and add it under **API permissions** of this one.)
@@ -160,7 +160,7 @@ Xcode opens. In the left sidebar, **App → App** is where everything below happ
 
 1. Click the blue **App** project at the top of the sidebar → under **TARGETS** select **App** → open the **Signing & Capabilities** tab.
 2. Tick **Automatically manage signing**, and choose your company **Team**. (For a quick personal test, your own Apple ID also works.)
-3. Check that **Bundle Identifier** is `com.transworld.jets.feedback`.
+3. Set **Bundle Identifier** to `com.transworld.jets.privateskies` (`tools/ios-setup.rb` does this automatically).
 
 No extra capabilities are needed. MSAL keeps the sign-in in the app's own keychain storage.
 
@@ -189,7 +189,7 @@ Right-click **Info.plist** → **Open As → Source Code**. Paste the following 
 
 ### 4f. Version and display name
 
-On the **General** tab, set **Display Name** to `Private Skies Feedback`, **Version** to `1.0.0` and **Build** to `1`.
+On the **General** tab, set **Display Name** to `Private Skies`, **Version** to `1.0.0` and **Build** to `1`.
 App icon: drag `resources/ios/AppIcon-1024.png` onto **Assets → AppIcon** (one 1024×1024 PNG, no transparency).
 `tools/ios-setup.rb` does this automatically.
 
@@ -214,7 +214,7 @@ signs it with a free Apple ID and installs it over USB.
 3. Connect the iPhone with a cable, unlock it and tap **Trust**.
 4. Open Sideloadly, drag in the `.ipa`, enter an Apple ID, and click **Start**.
    Use a **separate test Apple ID**, not your personal one, because you're giving its password to a third-party tool.
-   Keep the bundle ID `com.transworld.jets.feedback`, since Entra's iOS redirect depends on it.
+   Keep the bundle ID `com.transworld.jets.privateskies`, since Entra's iOS redirect depends on it.
 5. On the iPhone, turn on **Settings → Privacy & Security → Developer Mode** (it restarts), then
    **Settings → General → VPN & Device Management → [the Apple ID] → Trust**.
 6. Open the app and run the [part 6](#6-test-checklist) checklist.
@@ -229,16 +229,28 @@ at most 3 such apps per phone, and Apple may refuse the bundle ID if it's alread
 Install on the iPhone through TestFlight instead of part 5. One-time setup:
 
 1. **Apple Developer portal** → Certificates, Identifiers & Profiles → **Identifiers → +** → App IDs → App:
-   Bundle ID (explicit) `com.transworld.jets.feedback`. No extra capabilities are needed.
-2. **App Store Connect** → Apps → **+ New App**: iOS, name "Private Skies Feedback", that bundle ID, SKU `tw-feedback`.
-3. **App Store Connect** → Users and Access → **Integrations → App Store Connect API** → **+**: role **App Manager**.
-   Download the `.p8` file (only possible once) and note the Issuer ID and Key ID.
-4. **Codemagic** → Team settings → **Team integrations → Developer Portal → Connect**: upload the `.p8` with the
-   Issuer ID and Key ID, and name it exactly **`Transworld ASC`** (the name in `codemagic.yaml`).
-5. **Codemagic** → Team settings → **Code signing identities**:
-   * **iOS certificates → Generate certificate**, type *Apple Distribution*, using that API key.
-   * **iOS provisioning profiles → Fetch profiles**. If none is listed for the bundle ID, create one in the Apple portal
-     (**Profiles → +** → *App Store Connect* → the bundle ID → the certificate Codemagic generated), then fetch again.
+   Bundle ID (explicit) `com.transworld.jets.privateskies`. No extra capabilities are needed.
+2. **App Store Connect** → Apps → **+ New App**: iOS, name "Private Skies, Transworld Jets", that bundle ID, SKU `tw-jets-app`.
+3. **App Store Connect** → Users and Access → **Integrations → App Store Connect API** → **Team Keys → +**: role
+   **App Manager**. Download the `.p8` file (only possible once) and note the **Issuer ID** and **Key ID**.
+4. **Certificate key** (on your PC, once): this key signs the distribution certificate the build creates.
+   ```bash
+   ssh-keygen -t rsa -b 2048 -m PEM -f cert_key -q -N ""
+   ```
+   It writes `cert_key` (private, keep it safe and out of git) and `cert_key.pub` (not needed).
+5. **Codemagic** → your app → **Environment variables** (no Team settings needed). Add four variables, all in the
+   group **`appstore_credentials`**, each marked **Secret**:
+
+   | Name | Value |
+   |---|---|
+   | `APP_STORE_CONNECT_ISSUER_ID` | Issuer ID from step 3 |
+   | `APP_STORE_CONNECT_KEY_IDENTIFIER` | Key ID from step 3 |
+   | `APP_STORE_CONNECT_PRIVATE_KEY` | The full text of the `.p8` file, including the `-----BEGIN/END PRIVATE KEY-----` lines |
+   | `CERTIFICATE_PRIVATE_KEY` | The full text of `cert_key` from step 4, including the BEGIN/END lines |
+
+   The first build creates the *Apple Distribution* certificate and the *App Store* profile for the bundle ID itself.
+   (Apple allows only a few distribution certificates per team; if the build says the limit is reached, revoke an
+   unused one in the Developer portal, or put the key of an existing certificate in `CERTIFICATE_PRIVATE_KEY`.)
 6. Push the repo (with `codemagic.yaml` at the root), and in Codemagic click **Check for configuration file**,
    then **Start new build** → workflow *iOS → TestFlight*.
 7. When the build finishes (about 15–25 min, plus 15–30 min of Apple processing), go to **App Store Connect → TestFlight →
@@ -246,6 +258,8 @@ Install on the iPhone through TestFlight instead of part 5. One-time setup:
 
 Each new push → **Start new build** gives a new TestFlight build. The build number comes from Codemagic's
 counter, and the visible version is `APP_VERSION` in `codemagic.yaml`.
+
+**Never commit** the `.p8` file or `cert_key`. Add both to `.gitignore` if they're in the project folder.
 
 ---
 
@@ -290,7 +304,7 @@ even if the app was closed then.
 
 1. In `www/js/config.js`, set `ACTIVE = "prod"`, then run `npx cap sync ios` on the Mac.
 2. In **App Store Connect** (appstoreconnect.apple.com) → **Apps** → **+ New App**:
-   platform iOS, name "Private Skies Feedback", bundle ID `com.transworld.jets.feedback`, SKU `tw-feedback`.
+   platform iOS, name "Private Skies, Transworld Jets", bundle ID `com.transworld.jets.privateskies`, SKU `tw-jets-app`.
 3. In Xcode, set the run destination to **Any iOS Device (arm64)**, then choose **Product → Archive**.
 4. When the Organizer window opens, click **Distribute App** → **App Store Connect** → **Upload**, accepting the defaults.
 5. Wait about 15–30 minutes for processing. The build then appears in App Store Connect under **TestFlight**.

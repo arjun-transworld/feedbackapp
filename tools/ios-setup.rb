@@ -5,6 +5,12 @@ require 'fileutils'
 require 'json'
 require 'xcodeproj'
 
+# iOS identity. The bundle ID is registered in the Apple Developer portal, App Store Connect and
+# Entra (iOS platform → redirect msauth.<bundle id>://auth); keep codemagic.yaml's bundle_identifier
+# the same. Android keeps the appId from capacitor.config.json.
+IOS_BUNDLE_ID = 'com.transworld.jets.privateskies'
+IOS_DISPLAY_NAME = 'Private Skies' # home-screen label; longer names get cut off
+
 root = File.expand_path('..', __dir__)
 app_dir = File.join(root, 'ios/App/App')
 abort "ios/App not found. Run `npx cap add ios` first." unless Dir.exist?(app_dir)
@@ -48,8 +54,9 @@ File.write(File.join(app_dir, 'App.entitlements'), <<~XML)
 XML
 group.new_reference('App.entitlements') unless group.files.any? { |r| r.path == 'App.entitlements' }
 
-# 4f. Version and build number
+# 4d/4f. Bundle ID, version and build number
 target.build_configurations.each do |config|
+  config.build_settings['PRODUCT_BUNDLE_IDENTIFIER'] = IOS_BUNDLE_ID
   config.build_settings['CODE_SIGN_ENTITLEMENTS'] = 'App/App.entitlements'
   config.build_settings['MARKETING_VERSION'] = ENV['APP_VERSION'] || '1.0.0'
   config.build_settings['CURRENT_PROJECT_VERSION'] = ENV['BUILD_NUMBER'] || '1'
@@ -64,7 +71,7 @@ types = (plist['CFBundleURLTypes'] ||= [])
 types << { 'CFBundleURLSchemes' => [scheme] } unless types.any? { |t| Array(t['CFBundleURLSchemes']).include?(scheme) }
 queries = (plist['LSApplicationQueriesSchemes'] ||= [])
 %w[msauthv2 msauthv3].each { |s| queries << s unless queries.include?(s) }
-plist['CFBundleDisplayName'] = 'Private Skies Feedback'
+plist['CFBundleDisplayName'] = IOS_DISPLAY_NAME
 plist['ITSAppUsesNonExemptEncryption'] = false
 Xcodeproj::Plist.write_to_path(plist, plist_path)
 
