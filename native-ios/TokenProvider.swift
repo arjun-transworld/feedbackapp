@@ -53,6 +53,14 @@ enum TokenProvider {
         ctx.app.acquireToken(with: params, completionBlock: completion)
     }
 
+    /// Crew sign-out: removes the account and its tokens from this device's MSAL cache, so nothing
+    /// more is sent on that person's behalf. Queued records stay and go out after the next sign-in.
+    /// (The browser sign-in session may remember the account; the next sign-in shows an account picker.)
+    static func signOut() {
+        guard let ctx = makeApp() else { return }
+        for account in (try? ctx.app.allAccounts()) ?? [] { try? ctx.app.remove(account) }
+    }
+
     /// Calls back with a token, or nil and the reason (shown to crew in the queue list): not signed in,
     /// refresh token expired or revoked, a sign-in policy requiring interaction, or keychain locked.
     static func token(forceRefresh: Bool = false, completion: @escaping (_ token: String?, _ failure: String?) -> Void) {

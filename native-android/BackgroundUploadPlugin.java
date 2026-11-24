@@ -12,6 +12,7 @@ import org.json.JSONObject;
 /**
  * JS bridge: window.Capacitor.Plugins.BackgroundUpload — same API as the iOS plugin.
  *   signIn({ clientId, tenantId, scope, keyHash }) -> { idToken, username }: Microsoft sign-in (crew)
+ *   signOut()           -> removes the crew account and its tokens from this device
  *   enqueue({ id, url, headers, body, auth: { clientId, tenantId, scope, keyHash } })
  *   getState()          -> { results: [{id, status, at, detail?}], active: [id] }
  *   clearResults({ ids })
@@ -40,6 +41,18 @@ public class BackgroundUploadPlugin extends Plugin {
             ret.put("username", result.getAccount().getUsername());
             call.resolve(ret);
         });
+    }
+
+    @PluginMethod
+    public void signOut(PluginCall call) {
+        new Thread(() -> {
+            try {
+                TokenProvider.signOut(getContext());
+                call.resolve();
+            } catch (Exception e) {
+                call.reject(e.getMessage());
+            }
+        }).start();
     }
 
     @PluginMethod

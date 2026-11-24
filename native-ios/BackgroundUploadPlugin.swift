@@ -4,6 +4,7 @@ import MSAL
 
 /// JS bridge: window.Capacitor.Plugins.BackgroundUpload
 ///   signIn({ clientId, tenantId, scope }) -> { idToken, username }: Microsoft sign-in sheet (crew)
+///   signOut()                            -> removes the crew account and its tokens from this device
 ///   enqueue({ id, url, headers, body, auth: { clientId, tenantId, scope } })
 ///                                        -> queue a POST; a user token is attached natively
 ///   getState()                           -> { results: [{id, status, at, detail?}], active: [id] }
@@ -14,6 +15,7 @@ public class BackgroundUploadPlugin: CAPPlugin, CAPBridgedPlugin {
     public let jsName = "BackgroundUpload"
     public let pluginMethods: [CAPPluginMethod] = [
         CAPPluginMethod(name: "signIn", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "signOut", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "enqueue", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "getState", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "clearResults", returnType: CAPPluginReturnPromise),
@@ -33,6 +35,11 @@ public class BackgroundUploadPlugin: CAPPlugin, CAPBridgedPlugin {
                 call.resolve(["idToken": result.idToken ?? "", "username": result.account.username ?? ""])
             }
         }
+    }
+
+    @objc func signOut(_ call: CAPPluginCall) {
+        TokenProvider.signOut()
+        call.resolve()
     }
 
     /// MSAL's localizedDescription is only "MSALErrorDomain error -50000"; the reason is in userInfo.

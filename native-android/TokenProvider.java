@@ -80,6 +80,17 @@ final class TokenProvider {
         }).start();
     }
 
+    /**
+     * Crew sign-out: removes the account and its tokens from this device's MSAL cache, so nothing more
+     * is sent on that person's behalf. Queued records stay and go out after the next sign-in.
+     * Blocking — call only from a background thread.
+     */
+    static void signOut(Context c) throws Exception {
+        IMultipleAccountPublicClientApplication app = createApp(c);
+        if (app == null) return;
+        for (IAccount account : app.getAccounts()) app.removeAccount(account);
+    }
+
     /** A token, or null and the reason (shown to crew in the queue list). */
     static final class TokenResult {
         final String token;

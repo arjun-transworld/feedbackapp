@@ -1,6 +1,6 @@
 import * as store from "./store.js";
 import * as sync from "./sync.js";
-import { getAccount, signIn, isNative } from "./auth.js";
+import { getAccount, signIn, signOut, isNative } from "./auth.js";
 import { isConfigured } from "./config.js";
 
 const FLIGHT_KEY = "tw.feedback.flight";
@@ -147,6 +147,22 @@ $("crew-signin").addEventListener("click", async () => {
   renderStatus();
 });
 
+$("crew-signout").addEventListener("click", async () => {
+  const waiting = store.all().filter((r) => r.status !== "sent").length;
+  const name = getAccount()?.name || getAccount()?.username || "this crew member";
+  const message = `Sign out ${name}?` +
+    (waiting ? `\n\n${waiting} feedback ${waiting === 1 ? "form is" : "forms are"} waiting. ` +
+      "They stay on this device and are sent after the next crew sign-in." : "");
+  if (!confirm(message)) return;
+  try {
+    await signOut();
+  } catch (err) {
+    alert("Sign-out failed: " + err.message);
+  }
+  sync.clearAuthProblem();
+  renderStatus();
+});
+
 $("crew-sync").addEventListener("click", () => sync.reconcile());
 $("crew-retry").addEventListener("click", () => sync.retryRejected());
 
@@ -179,6 +195,8 @@ function renderStatus() {
 
   const acct = getAccount();
   $("crew-account").textContent = acct ? `Signed in as ${acct.name || acct.username}` : "Not signed in";
+  $("crew-signin").hidden = !!acct;
+  $("crew-signout").hidden = !acct;
   // Unsent first, then the 10 most recently sent with the time the server confirmed them.
   const time = (iso) => new Date(iso).toLocaleString([], { dateStyle: "short", timeStyle: "short" });
   const unsent = records.filter((r) => r.status !== "sent");

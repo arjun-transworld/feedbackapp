@@ -58,6 +58,20 @@ export async function signIn() {
   return !!(await getAccessToken()); // redirects to Microsoft sign-in if needed
 }
 
+/**
+ * Crew sign-out: removes the account and its tokens from this device. Nothing more is sent on
+ * that person's behalf; waiting feedback stays and goes out after the next crew sign-in.
+ */
+export async function signOut() {
+  if (isNative) {
+    await window.Capacitor.Plugins.BackgroundUpload.signOut();
+  } else if (isConfigured) {
+    await initWebAuth();
+    await window.TransworldAuth.signOut().catch(() => {}); // popup may be blocked; local state is cleared below
+  }
+  localStorage.removeItem(ACCOUNT_KEY);
+}
+
 /** Browser only: a valid access token for the API, or null if redirecting to sign in. */
 export async function getAccessToken() {
   if (!isConfigured) return null;
